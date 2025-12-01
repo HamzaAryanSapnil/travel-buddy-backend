@@ -1,0 +1,33 @@
+model TravelPlan {
+  id            String        @id @default(uuid())
+  ownerId       String        @map("owner_id")
+  title         String
+  origin        String?
+  destination   String
+  startDate     DateTime      @map("start_date")
+  endDate       DateTime      @map("end_date")
+  budgetMin     Float?        @map("budget_min")
+  budgetMax     Float?        @map("budget_max")
+  travelType    TravelType    @map("travel_type")
+  visibility    PlanVisibility @default(PUBLIC)
+  description   String?
+  isFeatured    Boolean       @default(false) @map("is_featured")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  owner         User          @relation("PlanOwner", fields: [ownerId], references: [id])
+  itineraryItems ItineraryItem[]
+  tripMembers    TripMember[]
+  meetups        Meetup[]
+  reviews        Review[]
+  media          Media[]
+  invitations    Invitation[]
+  plannerSessions PlannerSession[]
+
+  @@index([ownerId])
+  @@index([destination])
+  @@index([startDate, endDate])
+  @@map("travel_plans")
+}
+

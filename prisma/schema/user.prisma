@@ -1,0 +1,37 @@
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  passwordHash     String    @map("password_hash")
+  role             Role      @default(USER)
+  fullName         String?   @map("full_name")
+  profileImage     String?   @map("profile_image")
+  bio              String?
+  interests        String[]  @default([])
+  visitedCountries String[]  @default([]) @map("visited_countries")
+  location         String?
+  isVerified       Boolean   @default(false) @map("is_verified")
+  avgRating        Float?    @default(0) @map("avg_rating")
+  status           UserStatus @default(ACTIVE)
+  emailVerifiedAt  DateTime? @map("email_verified_at")
+  lastLoginAt      DateTime? @map("last_login_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  travelPlans      TravelPlan[] @relation("PlanOwner")
+  tripMembers      TripMember[]
+  invitationsSent Invitation[] @relation("InvFrom")
+  invitationsReceived Invitation[] @relation("InvTo")
+  meetupsOrganized Meetup[]
+  reviewsGiven     Review[]   @relation("GivenReviews")
+  reviewsReceived  Review[]   @relation("ReceivedReviews")
+  subscriptions    Subscription[]
+  payments         PaymentTransaction[]
+  plannerSessions  PlannerSession[]
+  media            Media[]
+  chatThreads      ChatThread[] @relation("UserThreads")
+  messages         Message[]
+
+  @@map("users")
+}
+

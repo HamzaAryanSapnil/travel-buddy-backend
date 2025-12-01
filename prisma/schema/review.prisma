@@ -1,0 +1,23 @@
+model Review {
+  id            String   @id @default(uuid())
+  rating        Int      // 1-5
+  comment       String?
+  isEdited      Boolean  @default(false) @map("is_edited")
+  source        RatingSource
+  reviewerId    String   @map("reviewer_id")
+  reviewedUserId String? @map("reviewed_user_id")
+  planId        String?  @map("plan_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  reviewer      User    @relation("GivenReviews", fields: [reviewerId], references: [id])
+  reviewedUser   User?  @relation("ReceivedReviews", fields: [reviewedUserId], references: [id])
+  plan          TravelPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([reviewedUserId])
+  @@index([planId])
+  @@index([reviewerId])
+  @@map("reviews")
+}
+

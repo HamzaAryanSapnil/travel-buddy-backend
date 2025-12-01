@@ -1,0 +1,18 @@
+model Message {
+  id          String   @id @default(uuid())
+  threadId    String   @map("thread_id")
+  senderId    String   @map("sender_id")
+  content     String?
+  contentJson Json?    @map("content_json")
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender      User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+

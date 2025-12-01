@@ -1,11 +1,21 @@
 import express from 'express';
+import { authRoutes } from '../modules/auth/auth.routes';
 
 const router = express.Router();
 
-// Module routes will be added here
-// Example:
-// router.use('/auth', authRoutes);
-// router.use('/user', userRoutes);
+const moduleRoutes = [
+    {
+        path: '/auth',
+        route: authRoutes
+    },
+    // Add more module routes here
+    // {
+    //     path: '/user',
+    //     route: userRoutes
+    // },
+];
+
+moduleRoutes.forEach(route => router.use(route.path, route.route));
 
 export default router;
 

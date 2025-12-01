@@ -1,0 +1,18 @@
+model Media {
+  id        String  @id @default(uuid())
+  ownerId   String  @map("owner_id")
+  planId    String? @map("plan_id")
+  url       String
+  provider  String  @default("cloudinary")
+  type      String? // photo, video
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  owner     User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  plan      TravelPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([planId])
+  @@map("media")
+}
+

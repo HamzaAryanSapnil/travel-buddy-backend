@@ -1,0 +1,24 @@
+model Meetup {
+  id             String @id @default(uuid())
+  planId         String @map("plan_id")
+  organizerId    String @map("organizer_id")
+  scheduledAt    DateTime @map("scheduled_at")
+  location       String?
+  locationId     String? @map("location_id")
+  status         MeetupStatus @default(PENDING)
+  maxParticipants Int? @map("max_participants")
+  videoRoomLink  String? @map("video_room_link")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  plan           TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  organizer      User       @relation(fields: [organizerId], references: [id])
+  locationRel   Location?  @relation(fields: [locationId], references: [id])
+  invitations    Invitation[]
+
+  @@index([planId, scheduledAt])
+  @@index([organizerId])
+  @@map("meetups")
+}
+

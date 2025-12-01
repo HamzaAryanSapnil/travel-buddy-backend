@@ -1,0 +1,19 @@
+model Location {
+  id            String   @id @default(uuid())
+  name          String
+  address       String?
+  city          String?
+  country       String?
+  latitude      Float?
+  longitude     Float?
+  googlePlaceId String?  @map("google_place_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  itineraries   ItineraryItem[]
+  meetups       Meetup[]
+
+  @@index([googlePlaceId])
+  @@map("locations")
+}
+

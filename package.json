@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "main": "dist/server.js",
   "prisma": {
-    "schema": "./prisma/schema/schema.prisma"
+    "schema": "./prisma/schema"
   },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only ./src/server.ts",
     "build": "tsc",
     "start": "node ./dist/server.js",
-    "prisma:generate": "prisma generate --schema=./prisma/schema/schema.prisma",
-    "prisma:migrate": "prisma migrate dev --schema=./prisma/schema/schema.prisma",
-    "prisma:studio": "prisma studio --schema=./prisma/schema/schema.prisma"
+    "prisma:generate": "prisma generate --schema=./prisma/schema",
+    "prisma:migrate": "prisma migrate dev --schema=./prisma/schema",
+    "prisma:studio": "prisma studio --schema=./prisma/schema"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,18 @@
+model TripMember {
+  id        String @id @default(uuid())
+  planId    String @map("plan_id")
+  userId    String @map("user_id")
+  role      TripMemberRole
+  status    InvitationStatus @default(ACCEPTED)
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  plan      TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, userId])
+  @@index([userId])
+  @@index([planId])
+  @@map("trip_members")
+}
+

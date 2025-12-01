@@ -1,0 +1,21 @@
+model ItineraryItem {
+  id         String     @id @default(uuid())
+  planId     String     @map("plan_id")
+  dayIndex   Int        @map("day_index")
+  startAt    DateTime?  @map("start_at")
+  endAt      DateTime?  @map("end_at")
+  title      String
+  description String?
+  locationId String?    @map("location_id")
+  order      Int        @default(0)
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  plan       TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  location   Location?  @relation(fields: [locationId], references: [id])
+
+  @@index([planId, dayIndex, order])
+  @@map("itinerary_items")
+}
+

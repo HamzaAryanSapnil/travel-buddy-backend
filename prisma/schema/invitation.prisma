@@ -1,0 +1,23 @@
+model Invitation {
+  id         String @id @default(uuid())
+  fromUserId String @map("from_user_id")
+  toUserId   String @map("to_user_id")
+  planId     String? @map("plan_id")
+  meetupId   String? @map("meetup_id")
+  message    String?
+  status     InvitationStatus @default(PENDING)
+  sentAt     DateTime @default(now()) @map("sent_at")
+  respondedAt DateTime? @map("responded_at")
+
+  // Relations
+  fromUser   User?  @relation("InvFrom", fields: [fromUserId], references: [id])
+  toUser     User?  @relation("InvTo", fields: [toUserId], references: [id])
+  plan       TravelPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  meetup     Meetup?     @relation(fields: [meetupId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId, status])
+  @@index([planId])
+  @@index([meetupId])
+  @@map("invitations")
+}
+

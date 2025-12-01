@@ -1,0 +1,19 @@
+model PlannerSession {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  planId      String?  @map("plan_id")
+  promptFlow  Json     @map("prompt_flow") // array of {q,a,uiStep,ts}
+  finalOutput Json?    @map("final_output") // strict schema
+  uiState     String?  @map("ui_state")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        TravelPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([planId])
+  @@map("planner_sessions")
+}
+

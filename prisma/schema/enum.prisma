@@ -1,0 +1,64 @@
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TravelType {
+  SOLO
+  COUPLE
+  FAMILY
+  FRIENDS
+  GROUP
+}
+
+enum PlanVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum MeetupStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum RatingSource {
+  USER_TO_USER
+  USER_TO_TRIP
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum TripMemberRole {
+  OWNER
+  CO_HOST
+  MEMBER
+}
+
+enum ChatThreadType {
+  USER
+  PLAN
+  MEETUP
+  SYSTEM
+}
+
