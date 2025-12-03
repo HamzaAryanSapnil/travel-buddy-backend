@@ -49,10 +49,17 @@ enum UserStatus {
   DELETED
 }
 
-enum TripMemberRole {
+enum TripRole {
   OWNER
-  CO_HOST
-  MEMBER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum TripStatus {
+  JOINED
+  PENDING
+  REJECTED
 }
 
 enum ChatThreadType {
@@ -60,5 +67,19 @@ enum ChatThreadType {
   PLAN
   MEETUP
   SYSTEM
+}
+
+enum NotificationType {
+  PLAN_UPDATED
+  NEW_MESSAGE
+  MEMBER_JOINED
+  MEMBER_LEFT
+  ITINERARY_ADDED
+  ITINERARY_UPDATED
+  AI_LIMIT_REACHED
+  INVITATION_RECEIVED
+  INVITATION_ACCEPTED
+  MEETUP_CREATED
+  MEETUP_UPDATED
 }
 

@@ -31,11 +31,15 @@ const register = async (payload: { email: string; password: string }) => {
   const user = await prisma.user.create({
     data: {
       email: payload.email,
-      password: hashedPassword,
+      passwordHash: hashedPassword,
     },
     select: {
       id: true,
       email: true,
+      fullName: true,
+      role: true,
+      isVerified: true,
+      status: true,
       createdAt: true,
     },
   });
@@ -54,7 +58,7 @@ const login = async (payload: { email: string; password: string }) => {
   // Verify password
   const isCorrectPassword = await bcrypt.compare(
     payload.password,
-    user.password
+    user.passwordHash
   );
   if (!isCorrectPassword) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Password is incorrect!");
@@ -62,13 +66,13 @@ const login = async (payload: { email: string; password: string }) => {
 
   // Generate tokens
   const accessToken = jwtHelper.generateToken(
-    { email: user.email, userId: user.id },
+    { email: user.email, role: user.role, userId: user.id },
     config.jwt.jwt_secret as Secret,
     config.jwt.expires_in || "1h"
   );
 
   const refreshToken = jwtHelper.generateToken(
-    { email: user.email, userId: user.id },
+    { email: user.email, role: user.role, userId: user.id },
     config.jwt.refresh_token_secret as Secret,
     config.jwt.refresh_token_expires_in || "90d"
   );
@@ -79,6 +83,10 @@ const login = async (payload: { email: string; password: string }) => {
     user: {
       id: user.id,
       email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      isVerified: user.isVerified,
+      status: user.status,
     },
   };
 };
@@ -105,6 +113,7 @@ const refreshToken = async (token: string) => {
   const accessToken = jwtHelper.generateToken(
     {
       email: userData.email,
+      role: userData.role,
       userId: userData.id,
     },
     config.jwt.jwt_secret as Secret,
@@ -124,6 +133,15 @@ const getMe = async (user: { email: string; userId: string }) => {
     select: {
       id: true,
       email: true,
+      fullName: true,
+      profileImage: true,
+      bio: true,
+      location: true,
+      interests: true,
+      visitedCountries: true,
+      isVerified: true,
+      status: true,
+      role: true,
       createdAt: true,
     },
   });

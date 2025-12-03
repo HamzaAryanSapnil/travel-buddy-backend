@@ -1,0 +1,16 @@
+model ChatThreadMember {
+  id        String   @id @default(uuid())
+  threadId  String   @map("thread_id")
+  userId    String   @map("user_id")
+  role      String   @default("member") // owner/admin/member
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, userId])
+  @@index([userId])
+  @@map("chat_thread_members")
+}
+

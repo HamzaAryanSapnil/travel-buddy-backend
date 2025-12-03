@@ -2,9 +2,12 @@ model TripMember {
   id        String @id @default(uuid())
   planId    String @map("plan_id")
   userId    String @map("user_id")
-  role      TripMemberRole
-  status    InvitationStatus @default(ACCEPTED)
-  joinedAt  DateTime @default(now()) @map("joined_at")
+  role      TripRole
+  status    TripStatus @default(JOINED)
+  addedBy   String? @map("added_by")
+  joinedAt  DateTime? @default(now()) @map("joined_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   plan      TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)

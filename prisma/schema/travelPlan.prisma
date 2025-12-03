@@ -9,7 +9,8 @@ model TravelPlan {
   budgetMin     Float?        @map("budget_min")
   budgetMax     Float?        @map("budget_max")
   travelType    TravelType    @map("travel_type")
-  visibility    PlanVisibility @default(PUBLIC)
+  visibility    PlanVisibility @default(PRIVATE)
+  coverPhoto    String?       @map("cover_photo")
   description   String?
   isFeatured    Boolean       @default(false) @map("is_featured")
   createdAt     DateTime      @default(now()) @map("created_at")

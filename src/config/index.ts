@@ -18,6 +18,10 @@ export default {
     openrouter: {
         api_key: process.env.OPENROUTER_API_KEY
     },
+    ai: {
+        model_name: process.env.AI_MODEL_NAME || process.env.OPENROUTER_MODEL_NAME || 'google/gemini-2.0-flash-exp:free',
+        api_key: process.env.AI_API_KEY || process.env.OPENROUTER_API_KEY
+    },
     resend: {
         api_key: process.env.RESEND_API_KEY,
         from_email: process.env.RESEND_FROM_EMAIL

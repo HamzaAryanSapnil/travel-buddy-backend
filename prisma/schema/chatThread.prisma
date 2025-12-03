@@ -2,10 +2,13 @@ model ChatThread {
   id        String   @id @default(uuid())
   type      ChatThreadType
   refId     String?  @map("ref_id") // planId or meetupId etc
+  title     String?
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   messages  Message[]
+  members   ChatThreadMember[]
   users     User[]   @relation("UserThreads")
 
   @@index([type, refId])

@@ -4,8 +4,12 @@ model Message {
   senderId    String   @map("sender_id")
   content     String?
   contentJson Json?    @map("content_json")
+  attachments Json?    // optional: array of { url, type }
   isSystem    Boolean  @default(false) @map("is_system")
+  isEdited    Boolean  @default(false) @map("is_edited")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
   createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
   thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
