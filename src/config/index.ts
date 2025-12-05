@@ -36,6 +36,11 @@ export default {
     },
     salt_round: process.env.SALT_ROUND,
     reset_pass_link: process.env.RESET_PASS_LINK,
-    frontend_url: process.env.FRONTEND_URL
+    frontend_url: process.env.FRONTEND_URL,
+    stripe: {
+        secret_key: process.env.STRIPE_SECRET_KEY,
+        publishable_key: process.env.STRIPE_PUBLISHABLE_KEY,
+        webhook_secret: process.env.STRIPE_WEBHOOK_SECRET
+    }
 }
 

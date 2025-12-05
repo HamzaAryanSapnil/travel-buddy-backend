@@ -16,6 +16,7 @@ model Meetup {
   organizer      User       @relation(fields: [organizerId], references: [id])
   locationRel   Location?  @relation(fields: [locationId], references: [id])
   invitations    Invitation[]
+  media          Media[]
 
   @@index([planId, scheduledAt])
   @@index([organizerId])

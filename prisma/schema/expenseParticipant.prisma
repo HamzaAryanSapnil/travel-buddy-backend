@@ -1,0 +1,20 @@
+model ExpenseParticipant {
+  id        String   @id @default(uuid())
+  expenseId String   @map("expense_id")
+  userId    String   @map("user_id")
+  amount    Float
+  isPaid    Boolean  @default(false) @map("is_paid")
+  paidAt    DateTime? @map("paid_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user      User     @relation("ExpenseParticipant", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, userId])
+  @@index([expenseId])
+  @@index([userId, isPaid])
+  @@map("expense_participants")
+}
+

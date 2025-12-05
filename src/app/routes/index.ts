@@ -7,6 +7,12 @@ import { ItineraryRoutes } from "../modules/itinerary/itinerary.routes";
 import { PlannerRoutes } from "../modules/planner/planner.routes";
 import { ChatRoutes } from "../modules/chat/chat.routes";
 import { NotificationRoutes } from "../modules/notification/notification.routes";
+import { MeetupRoutes } from "../modules/meetup/meetup.routes";
+import { ExpenseRoutes } from "../modules/expense/expense.routes";
+import { SubscriptionRoutes } from "../modules/subscription/subscription.routes";
+import { PaymentRoutes } from "../modules/payment/payment.routes";
+import { MediaRoutes } from "../modules/media/media.routes";
+import { ReviewRoutes } from "../modules/review/review.routes";
 
 const router = express.Router();
 
@@ -42,6 +48,30 @@ const moduleRoutes = [
   {
     path: "/notifications",
     route: NotificationRoutes,
+  },
+  {
+    path: "/meetups",
+    route: MeetupRoutes,
+  },
+  {
+    path: "/expenses",
+    route: ExpenseRoutes,
+  },
+  {
+    path: "/subscriptions",
+    route: SubscriptionRoutes,
+  },
+  {
+    path: "/payments",
+    route: PaymentRoutes,
+  },
+  {
+    path: "/media",
+    route: MediaRoutes,
+  },
+  {
+    path: "/reviews",
+    route: ReviewRoutes,
   },
 ];
 

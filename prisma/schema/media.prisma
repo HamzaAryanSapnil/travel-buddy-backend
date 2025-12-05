@@ -1,18 +1,24 @@
 model Media {
-  id        String  @id @default(uuid())
-  ownerId   String  @map("owner_id")
-  planId    String? @map("plan_id")
-  url       String
-  provider  String  @default("cloudinary")
-  type      String? // photo, video
-  createdAt DateTime @default(now()) @map("created_at")
+  id             String  @id @default(uuid())
+  ownerId        String  @map("owner_id")
+  planId         String? @map("plan_id")
+  meetupId       String? @map("meetup_id")
+  itineraryItemId String? @map("itinerary_item_id")
+  url            String
+  provider       String  @default("cloudinary")
+  type           String? // photo, video
+  createdAt      DateTime @default(now()) @map("created_at")
 
   // Relations
-  owner     User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  plan      TravelPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  owner          User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  plan           TravelPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  meetup         Meetup? @relation(fields: [meetupId], references: [id], onDelete: Cascade)
+  itineraryItem  ItineraryItem? @relation(fields: [itineraryItemId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@index([planId])
+  @@index([meetupId])
+  @@index([itineraryItemId])
   @@map("media")
 }
 

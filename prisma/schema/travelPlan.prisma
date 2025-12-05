@@ -25,6 +25,7 @@ model TravelPlan {
   media          Media[]
   invitations    Invitation[]
   plannerSessions PlannerSession[]
+  expenses       Expense[]
 
   @@index([ownerId])
   @@index([destination])

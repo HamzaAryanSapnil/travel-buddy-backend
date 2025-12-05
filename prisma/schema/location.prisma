@@ -12,6 +12,7 @@ model Location {
   // Relations
   itineraries   ItineraryItem[]
   meetups       Meetup[]
+  expenses      Expense[]
 
   @@index([googlePlaceId])
   @@map("locations")
