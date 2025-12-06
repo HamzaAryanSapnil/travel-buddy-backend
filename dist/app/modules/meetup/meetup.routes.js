@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.MeetupRoutes = void 0;
+const express_1 = __importDefault(require("express"));
+const auth_1 = __importDefault(require("../../middlewares/auth"));
+const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
+const meetup_controller_1 = require("./meetup.controller");
+const meetup_validation_1 = require("./meetup.validation");
+const router = express_1.default.Router();
+router.post("/", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(meetup_validation_1.MeetupValidation.createMeetup), meetup_controller_1.MeetupController.createMeetup);
+router.get("/", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(meetup_validation_1.MeetupValidation.getMeetups), meetup_controller_1.MeetupController.getMeetups);
+router.get("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(meetup_validation_1.MeetupValidation.getMeetup), meetup_controller_1.MeetupController.getMeetup);
+router.patch("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(meetup_validation_1.MeetupValidation.updateMeetup), meetup_controller_1.MeetupController.updateMeetup);
+router.patch("/:id/status", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(meetup_validation_1.MeetupValidation.updateStatus), meetup_controller_1.MeetupController.updateStatus);
+router.post("/:id/rsvp", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(meetup_validation_1.MeetupValidation.rsvp), meetup_controller_1.MeetupController.rsvp);
+router.delete("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(meetup_validation_1.MeetupValidation.deleteMeetup), meetup_controller_1.MeetupController.deleteMeetup);
+exports.MeetupRoutes = router;

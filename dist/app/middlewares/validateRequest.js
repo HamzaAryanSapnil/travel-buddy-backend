@@ -12,7 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const validateRequest = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield schema.parseAsync({
-            body: req.body
+            body: req.body,
+            params: req.params,
+            query: req.query
         });
         return next();
     }

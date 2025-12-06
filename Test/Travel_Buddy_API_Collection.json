@@ -1,0 +1,1272 @@
+{
+  "info": {
+    "_postman_id": "travel-buddy-api-collection",
+    "name": "Travel Buddy API Collection",
+    "description": "Complete API collection for Travel Buddy Backend - Travel Planning & Collaboration Platform\n\nBase URL: {{baseUrl}}\n\nAll endpoints except /auth/* require authentication. Cookies (httpOnly) are used for token storage.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123!\",\n  \"fullName\": \"John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Register a new user. Password must be at least 8 characters, contain 1 uppercase, 1 special character, and 1 number."
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Login user. Returns accessToken and refreshToken in cookies (httpOnly)."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "refresh-token"]
+            },
+            "description": "Refresh access token using refreshToken cookie. The refreshToken should be present in cookies (set automatically after login). Make sure to enable cookie handling in Postman settings."
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Get current authenticated user profile. Requires authentication. Access token should be present in cookies."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me"]
+            },
+            "description": "Get current authenticated user's profile information. Requires authentication (accessToken in cookies)."
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"New Name\",\n  \"bio\": \"A short bio about yourself.\",\n  \"location\": \"Dhaka, Bangladesh\",\n  \"interests\": [\"Travel\", \"Hiking\"],\n  \"visitedCountries\": [\"BD\", \"IN\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me"]
+            },
+            "description": "Update profile information. All fields are optional. Requires authentication."
+          }
+        },
+        {
+          "name": "Update My Profile Photo",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me/photo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me", "photo"]
+            },
+            "description": "Update profile photo (attach a file to the 'photo' field in form-data body). Requires authentication."
+          }
+        },
+        {
+          "name": "Get My Travel Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me/travel-plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me", "travel-plans"]
+            },
+            "description": "Get all travel plans created by the authenticated user. Accepts optional pagination and filtering via query params. Requires authentication."
+          }
+        },
+        {
+          "name": "Get My Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me", "reviews"]
+            },
+            "description": "Get all reviews written by or received by the authenticated user. Accepts pagination and filtering via query params. Requires authentication."
+          }
+        },
+        {
+          "name": "Admin - Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "admin"]
+            },
+            "description": "Get all users (admin only). Accepts pagination and filtering via query params. Requires ADMIN role."
+          }
+        },
+        {
+          "name": "Admin - Update User Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/admin/{{userId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "admin", "{{userId}}", "status"]
+            },
+            "description": "Update status (ACTIVE, SUSPENDED, DELETED) of a user. ADMIN only."
+          }
+        },
+        {
+          "name": "Admin - Verify User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isVerified\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/admin/{{userId}}/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "admin", "{{userId}}", "verify"]
+            },
+            "description": "Set verification status of a user (isVerified true/false). ADMIN only."
+          }
+        },
+        {
+          "name": "Admin - Update User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/admin/{{userId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "admin", "{{userId}}", "role"]
+            },
+            "description": "Update role of a user (USER or ADMIN). ADMIN only."
+          }
+        },
+        {
+          "name": "Admin - Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/admin/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "admin", "{{userId}}"]
+            },
+            "description": "Soft delete a user (admin only)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Travel Plans",
+      "item": [
+        {
+          "name": "Create Travel Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Spring Trip to Cox's Bazar\",\n  \"destination\": \"Cox's Bazar, Bangladesh\",\n  \"origin\": \"Dhaka, Bangladesh\",\n  \"startDate\": \"2025-09-15\",\n  \"endDate\": \"2025-09-21\",\n  \"travelType\": \"FRIEND_GROUP\", \n  \"budgetMin\": 5000,\n  \"budgetMax\": 12000,\n  \"visibility\": \"PUBLIC\",\n  \"description\": \"An awesome week-long trip!\",\n  \"coverPhoto\": \"https://my-cloudinary-url/trip-photo.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans"]
+            },
+            "description": "Create a new travel plan. All fields are required except coverPhoto. Requires authentication."
+          }
+        },
+        {
+          "name": "Get My Travel Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "type",
+                  "value": ""
+                },
+                {
+                  "key": "visibility",
+                  "value": ""
+                },
+                {
+                  "key": "searchTerm",
+                  "value": ""
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "Get all travel plans created by the authenticated user (supports pagination, filtering, search, sort). Requires authentication."
+          }
+        },
+        {
+          "name": "Get Single Travel Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans", "{{planId}}"]
+            },
+            "description": "Get details for a single travel plan (owned or public). Requires authentication for private plans. Replace {{planId}} with actual id."
+          }
+        },
+        {
+          "name": "Update Travel Plan",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Plan Title\",\n  \"destination\": \"Bandarban, Bangladesh\",\n  \"origin\": \"Dhaka\",\n  \"startDate\": \"2025-09-20\",\n  \"endDate\": \"2025-09-26\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans", "{{planId}}"]
+            },
+            "description": "Update a travel plan. Only allowed for the plan owner or admins. All fields optional, only send what you want to update."
+          }
+        },
+        {
+          "name": "Delete Travel Plan",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans", "{{planId}}"]
+            },
+            "description": "Delete a travel plan. Only owners or admins can delete. Replace {{planId}} with the actual id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trip Members",
+      "item": [
+        {
+          "name": "Add Member to Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"member@example.com\",\n  \"role\": \"MEMBER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-members/{{planId}}/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-members", "{{planId}}", "add"]
+            },
+            "description": "Invite a user to join the trip as a member. Requires authentication and plan management permission. Role: MEMBER (default) or ADMIN."
+          }
+        },
+        {
+          "name": "Get Members of a Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-members/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-members", "{{planId}}"]
+            },
+            "description": "Get all members of a specific travel plan. Requires authentication. Replace {{planId}} with actual travel plan ID."
+          }
+        },
+        {
+          "name": "Update Member Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"memberUserId\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-members/{{planId}}/update-role",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-members", "{{planId}}", "update-role"]
+            },
+            "description": "Update a member's role in a trip (e.g. from MEMBER to ADMIN). Requires manager/admin rights on the travel plan."
+          }
+        },
+        {
+          "name": "Remove Member from Plan",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"memberUserId\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-members/{{planId}}/remove",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-members", "{{planId}}", "remove"]
+            },
+            "description": "Remove user from trip. Managers/admins only. userId in body, planId in path."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Itinerary",
+      "item": [
+        {
+          "name": "Create Itinerary Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"day\": 1,\n  \"title\": \"Visit Buddhist Temple\",\n  \"description\": \"Morning sightseeing at temple\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"11:00\",\n  \"location\": \"Buddha Dhatu Jadi\",\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/itinerary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "itinerary"]
+            },
+            "description": "Create an itinerary item (activity) for a travel plan. Requires plan member/admin. 'order' determines sequencing."
+          }
+        },
+        {
+          "name": "Get Itinerary Items By Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/itinerary?planId={{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "itinerary"],
+              "query": [
+                {
+                  "key": "planId",
+                  "value": "{{planId}}"
+                }
+              ]
+            },
+            "description": "Get all itinerary items for a specific plan. Use query param planId. Requires member."
+          }
+        },
+        {
+          "name": "Get Single Itinerary Item",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/itinerary/{{itemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "itinerary", "{{itemId}}"]
+            },
+            "description": "Get a specific itinerary item by ID. Requires plan membership."
+          }
+        },
+        {
+          "name": "Update Itinerary Item",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cox's Bazar Beach Relaxation\",\n  \"description\": \"Afternoon fun\",\n  \"startTime\": \"14:00\",\n  \"endTime\": \"18:00\",\n  \"location\": \"Main Beach\",\n  \"order\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/itinerary/{{itemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "itinerary", "{{itemId}}"]
+            },
+            "description": "Update fields for an existing itinerary item. Only send fields you want to update."
+          }
+        },
+        {
+          "name": "Delete Itinerary Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/itinerary/{{itemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "itinerary", "{{itemId}}"]
+            },
+            "description": "Delete an itinerary item by ID. Members/admins only."
+          }
+        },
+        {
+          "name": "Bulk Upsert Itinerary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"day\": 1,\n    \"items\": [\n      {\n        \"title\": \"Check-in at Hotel\",\n        \"description\": \"Arrival and room allocation.\",\n        \"startTime\": \"12:00\",\n        \"endTime\": \"13:00\",\n        \"location\": \"Green Valley Hotel\"\n      }\n    ]\n  },\n  {\n    \"day\": 2,\n    \"items\": []\n  }\n]\n"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/itinerary/bulk-upsert",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "itinerary", "bulk-upsert"]
+            },
+            "description": "Bulk create or update multiple itinerary days/items. Useful for large edits or import/export."
+          }
+        },
+        {
+          "name": "Reorder Itinerary Items",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"itemOrders\": [\n    { \"itemId\": \"item1\", \"order\": 2 },\n    { \"itemId\": \"item2\", \"order\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/itinerary/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "itinerary", "reorder"]
+            },
+            "description": "Reorder itinerary items for a plan. Provide planId and new order list."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Planner (AI)",
+      "item": [
+        {
+          "name": "Create Planning Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/planner/session/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "planner", "session", "complete"]
+            },
+            "description": "Complete the active AI planning session and get the generated itinerary. Requires authentication."
+          }
+        },
+        {
+          "name": "Get Planning Session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/planner/session/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "planner", "session", "{{sessionId}}"]
+            },
+            "description": "Get all info and messages for a planning session. Requires authentication."
+          }
+        },
+        {
+          "name": "Get My Planning Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/planner/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "planner", "sessions"]
+            },
+            "description": "Get list of all AI planning sessions for the authenticated user. Accepts pagination/query params. Requires authentication."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Create New Chat Thread",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"memberIds\": [\"userId1\", \"userId2\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/create-thread",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "create-thread"]
+            },
+            "description": "Create a new chat thread for a plan with selected members. Requires authentication. Only one thread per plan."
+          }
+        },
+        {
+          "name": "Get Chat Thread By Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/plan/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "plan", "{{planId}}"]
+            },
+            "description": "Get chat thread details for a given plan. Requires authentication."
+          }
+        },
+        {
+          "name": "Find Direct Thread/Member Thread",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/find-thread?userId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "find-thread"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Find direct thread between users by userId (for direct chat)."
+          }
+        },
+        {
+          "name": "Add Member to Thread",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"threadId\": \"{{threadId}}\",\n  \"userId\": \"userId3\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/add-member",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "add-member"]
+            },
+            "description": "Add new member to a chat thread. Needs threadId and userId."
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"threadId\": \"{{threadId}}\",\n  \"message\": \"Hello everyone!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/send-message",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "send-message"]
+            },
+            "description": "Send a message to a chat thread."
+          }
+        },
+        {
+          "name": "List Messages in Thread",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/messages/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "messages", "{{threadId}}"]
+            },
+            "description": "Get all messages for a thread (paginated). Requires authentication."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications & Meetups",
+      "item": [
+        {
+          "name": "Get All Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notifications"]
+            },
+            "description": "Get all notifications for the authenticated user (paginated, filterable)."
+          }
+        },
+        {
+          "name": "Mark All Notifications Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/mark-all-read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notifications", "mark-all-read"]
+            },
+            "description": "Mark all notifications as read for authenticated user."
+          }
+        },
+        {
+          "name": "Clear All Notifications",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/clear-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notifications", "clear-all"]
+            },
+            "description": "Delete all notifications for the authenticated user."
+          }
+        },
+        {
+          "name": "Create Meetup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"scheduledAt\": \"2025-09-20T16:00:00.000Z\",\n  \"location\": \"Cafe Rio\",\n  \"maxParticipants\": 8,\n  \"description\": \"Pre-trip discussion meetup.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/meetups",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "meetups"]
+            },
+            "description": "Create a new meetup for a travel plan. Requires authentication."
+          }
+        },
+        {
+          "name": "Get All Meetups For a Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/meetups?planId={{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "meetups"],
+              "query": [
+                {
+                  "key": "planId",
+                  "value": "{{planId}}"
+                }
+              ]
+            },
+            "description": "Get all meetups for a given travel plan (filterable, paginated)."
+          }
+        },
+        {
+          "name": "RSVP To Meetup",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"GOING\" // or \"NOT_GOING\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/meetups/{{meetupId}}/rsvp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "meetups", "{{meetupId}}", "rsvp"]
+            },
+            "description": "RSVP to a meetup (GOING or NOT_GOING)."
+          }
+        },
+        {
+          "name": "Update Meetup Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CANCELLED\" // or \"ACTIVE\", \"COMPLETED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/meetups/{{meetupId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "meetups", "{{meetupId}}", "status"]
+            },
+            "description": "Update status of a meetup (CANCELLED, ACTIVE, COMPLETED). Admin/host only."
+          }
+        },
+        {
+          "name": "Remove Meetup",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/meetups/{{meetupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "meetups", "{{meetupId}}"]
+            },
+            "description": "Remove a meetup by ID. Admin/host only."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Expenses",
+      "item": [
+        {
+          "name": "Create Expense",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"title\": \"Lunch\",\n  \"amount\": 1200,\n  \"currency\": \"BDT\",\n  \"category\": \"FOOD\",\n  \"splitType\": \"EQUAL\",\n  \"participants\": [\"userId1\", \"userId2\"],\n  \"date\": \"2025-09-21\",\n  \"description\": \"Lunch at beachside restaurant.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expenses"]
+            },
+            "description": "Create a new expense for a plan. Supports splitType (EQUAL, CUSTOM, PERCENTAGE)."
+          }
+        },
+        {
+          "name": "Get All Expenses For Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses?planId={{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expenses"],
+              "query": [
+                {
+                  "key": "planId",
+                  "value": "{{planId}}"
+                }
+              ]
+            },
+            "description": "Get all expenses for a specific plan (filterable, paginated)."
+          }
+        },
+        {
+          "name": "Get Single Expense",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expenses", "{{expenseId}}"]
+            },
+            "description": "Update fields of an existing expense. Only include fields you want to change."
+          }
+        },
+        {
+          "name": "Delete Expense",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expenses", "{{expenseId}}"]
+            },
+            "description": "Delete an expense by ID. Only allowed by creator or plan admin."
+          }
+        },
+        {
+          "name": "Settle Expense",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"fromUserId\": \"userId1\",\n  \"toUserId\": \"userId2\",\n  \"amount\": 600\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses/settle",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expenses", "settle"]
+            },
+            "description": "Record settlement/payment between members for a plan. Used to keep track of who owes whom."
+          }
+        },
+        {
+          "name": "Expenses Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses/summary?planId={{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expenses", "summary"],
+              "query": [
+                {
+                  "key": "planId",
+                  "value": "{{planId}}"
+                }
+              ]
+            },
+            "description": "Get summary/breakdown of all expenses, debts, settlements for a plan."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions, Payments, Media, Reviews",
+      "item": [
+        {
+          "name": "Get Current Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subscriptions/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "subscriptions", "status"]
+            },
+            "description": "Get user's active subscription status. Returns plan, validity, status, etc."
+          }
+        },
+        {
+          "name": "Create Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planType\": \"MONTHLY\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subscriptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "subscriptions"]
+            },
+            "description": "Create a new paid subscription (planType: MONTHLY or YEARLY). Payment handled via Stripe. Returns Stripe session."
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subscriptions/{{subscriptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "subscriptions", "{{subscriptionId}}"]
+            },
+            "description": "Cancel (end) active subscription."
+          }
+        },
+        {
+          "name": "Subscription History (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subscriptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "subscriptions"]
+            },
+            "description": "Get all subscriptions in the system (admin only; query params supported)."
+          }
+        },
+        {
+          "name": "Get All Payments (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments"]
+            },
+            "description": "Get all payment transactions (admin only). Filterable by user/plans."
+          }
+        },
+        {
+          "name": "Get My Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "me"]
+            },
+            "description": "Get authenticated user's payment history."
+          }
+        },
+        {
+          "name": "Upload Media File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "planId",
+                  "type": "text",
+                  "value": "{{planId}}"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "media", "upload"]
+            },
+            "description": "Upload a media file (Cloudinary integration). Attach planId and file."
+          }
+        },
+        {
+          "name": "List Media Files For Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media?planId={{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "media"],
+              "query": [
+                {
+                  "key": "planId",
+                  "value": "{{planId}}"
+                }
+              ]
+            },
+            "description": "List all media files for a plan."
+          }
+        },
+        {
+          "name": "Delete Media File",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/{{mediaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "media", "{{mediaId}}"]
+            },
+            "description": "Delete a media file by ID (creator/admin only)."
+          }
+        },
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"USER\",\n  \"targetId\": \"{{userId}}\",\n  \"rating\": 5,\n  \"comment\": \"Great travel companion!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "reviews"]
+            },
+            "description": "Create a review. targetType: USER or PLAN."
+          }
+        },
+        {
+          "name": "List Reviews (By User or Plan)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews?targetType=USER&targetId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "reviews"],
+              "query": [
+                {
+                  "key": "targetType",
+                  "value": "USER"
+                },
+                {
+                  "key": "targetId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "List all reviews for a user or plan. Use targetType=USER or PLAN, and targetId."
+          }
+        },
+        {
+          "name": "Update Review",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Good, but could improve communication.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/{{reviewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "reviews", "{{reviewId}}"]
+            },
+            "description": "Update a review (written by you)."
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/{{reviewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "reviews", "{{reviewId}}"]
+            },
+            "description": "Delete (remove) a review by ID (written by you or admin)."
+          }
+        }
+      ]
+    }
+  ]
+}

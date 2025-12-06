@@ -35,11 +35,15 @@ const register = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield prisma_1.prisma.user.create({
         data: {
             email: payload.email,
-            password: hashedPassword,
+            passwordHash: hashedPassword,
         },
         select: {
             id: true,
             email: true,
+            fullName: true,
+            role: true,
+            isVerified: true,
+            status: true,
             createdAt: true,
         },
     });
@@ -53,19 +57,23 @@ const login = (payload) => __awaiter(void 0, void 0, void 0, function* () {
         },
     });
     // Verify password
-    const isCorrectPassword = yield bcryptjs_1.default.compare(payload.password, user.password);
+    const isCorrectPassword = yield bcryptjs_1.default.compare(payload.password, user.passwordHash);
     if (!isCorrectPassword) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Password is incorrect!");
     }
     // Generate tokens
-    const accessToken = jwtHelper_1.jwtHelper.generateToken({ email: user.email, userId: user.id }, config_1.default.jwt.jwt_secret, config_1.default.jwt.expires_in || "1h");
-    const refreshToken = jwtHelper_1.jwtHelper.generateToken({ email: user.email, userId: user.id }, config_1.default.jwt.refresh_token_secret, config_1.default.jwt.refresh_token_expires_in || "90d");
+    const accessToken = jwtHelper_1.jwtHelper.generateToken({ email: user.email, role: user.role, userId: user.id }, config_1.default.jwt.jwt_secret, config_1.default.jwt.expires_in || "1h");
+    const refreshToken = jwtHelper_1.jwtHelper.generateToken({ email: user.email, role: user.role, userId: user.id }, config_1.default.jwt.refresh_token_secret, config_1.default.jwt.refresh_token_expires_in || "90d");
     return {
         accessToken,
         refreshToken,
         user: {
             id: user.id,
             email: user.email,
+            fullName: user.fullName,
+            role: user.role,
+            isVerified: user.isVerified,
+            status: user.status,
         },
     };
 });
@@ -86,6 +94,7 @@ const refreshToken = (token) => __awaiter(void 0, void 0, void 0, function* () {
     // Generate new access token
     const accessToken = jwtHelper_1.jwtHelper.generateToken({
         email: userData.email,
+        role: userData.role,
         userId: userData.id,
     }, config_1.default.jwt.jwt_secret, config_1.default.jwt.expires_in || "1h");
     return {
@@ -100,6 +109,15 @@ const getMe = (user) => __awaiter(void 0, void 0, void 0, function* () {
         select: {
             id: true,
             email: true,
+            fullName: true,
+            profileImage: true,
+            bio: true,
+            location: true,
+            interests: true,
+            visitedCountries: true,
+            isVerified: true,
+            status: true,
+            role: true,
             createdAt: true,
         },
     });

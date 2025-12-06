@@ -14,11 +14,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = __importDefault(require("./app"));
 const config_1 = __importDefault(require("./config"));
+const seedAdmin_1 = require("./seeds/seedAdmin");
 function bootstrap() {
     return __awaiter(this, void 0, void 0, function* () {
         // This variable will hold our server instance
         let server;
         try {
+            // Seed admin user before starting the server
+            yield (0, seedAdmin_1.seedAdmin)();
             // Start the server
             server = app_1.default.listen(config_1.default.port, () => {
                 console.log(`🚀 Travel Buddy Backend Server is running on http://localhost:${config_1.default.port}`);
@@ -27,7 +30,7 @@ function bootstrap() {
             const exitHandler = () => {
                 if (server) {
                     server.close(() => {
-                        console.log('Server closed gracefully.');
+                        console.log("Server closed gracefully.");
                         process.exit(1); // Exit with a failure code
                     });
                 }
@@ -36,8 +39,8 @@ function bootstrap() {
                 }
             };
             // Handle unhandled promise rejections
-            process.on('unhandledRejection', (error) => {
-                console.log('Unhandled Rejection is detected, we are closing our server...');
+            process.on("unhandledRejection", (error) => {
+                console.log("Unhandled Rejection is detected, we are closing our server...");
                 if (server) {
                     server.close(() => {
                         console.log(error);
@@ -50,7 +53,7 @@ function bootstrap() {
             });
         }
         catch (error) {
-            console.error('Error during server startup:', error);
+            console.error("Error during server startup:", error);
             process.exit(1);
         }
     });
