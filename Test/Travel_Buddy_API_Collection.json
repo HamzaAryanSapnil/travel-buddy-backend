@@ -400,14 +400,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"member@example.com\",\n  \"role\": \"MEMBER\"\n}"
+              "raw": "{\n  \"email\": \"member@example.com\",\n  \"role\": \"VIEWER\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/trip-members/{{planId}}/add",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "trip-members", "{{planId}}", "add"]
             },
-            "description": "Invite a user to join the trip as a member. Requires authentication and plan management permission. Role: MEMBER (default) or ADMIN."
+            "description": "Add a user to a travel plan by email. role must be one of: OWNER, ADMIN, EDITOR, or VIEWER (typically VIEWER or EDITOR for regular members). OWNER role is automatically assigned when creating a plan and cannot be assigned. Requires authentication and plan management permission."
           }
         },
         {
@@ -475,14 +475,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"day\": 1,\n  \"title\": \"Visit Buddhist Temple\",\n  \"description\": \"Morning sightseeing at temple\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"11:00\",\n  \"location\": \"Buddha Dhatu Jadi\",\n  \"order\": 1\n}"
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"dayIndex\": 1,\n  \"title\": \"Visit Buddhist Temple\",\n  \"description\": \"Morning sightseeing at temple\",\n  \"startAt\": \"2025-09-15T09:00:00.000Z\",\n  \"endAt\": \"2025-09-15T11:00:00.000Z\",\n  \"locationId\": \"{{locationId}}\",\n  \"order\": 1\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/itinerary",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "itinerary"]
             },
-            "description": "Create an itinerary item (activity) for a travel plan. Requires plan member/admin. 'order' determines sequencing."
+            "description": "Create an itinerary item (activity) for a travel plan. Required: planId, dayIndex (number, >= 1), title (3-200 chars). Optional: description (max 2000 chars), startAt (ISO datetime), endAt (ISO datetime, must be >= startAt), locationId (UUID), order (number, >= 0). Requires authentication and plan member/admin permission."
           }
         },
         {
@@ -491,17 +491,31 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/itinerary?planId={{planId}}",
+              "raw": "{{baseUrl}}/api/v1/itinerary/{{planId}}?dayIndex=1",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "itinerary"],
+              "path": ["api", "v1", "itinerary", "{{planId}}"],
               "query": [
                 {
-                  "key": "planId",
-                  "value": "{{planId}}"
+                  "key": "dayIndex",
+                  "value": "1",
+                  "description": "Filter by day index (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Page number (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Items per page (optional)",
+                  "disabled": true
                 }
               ]
             },
-            "description": "Get all itinerary items for a specific plan. Use query param planId. Requires member."
+            "description": "Get all itinerary items for a specific plan. planId must be in URL path (not query param). Optional query params: dayIndex (filter by day), page, limit. This endpoint can be accessed without authentication for PUBLIC plans. Requires authentication for PRIVATE/UNLISTED plans."
           }
         },
         {
@@ -510,11 +524,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/itinerary/{{itemId}}",
+              "raw": "{{baseUrl}}/api/v1/itinerary/item/{{itemId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "itinerary", "{{itemId}}"]
+              "path": ["api", "v1", "itinerary", "item", "{{itemId}}"]
             },
-            "description": "Get a specific itinerary item by ID. Requires plan membership."
+            "description": "Get a specific itinerary item by ID. itemId must be in URL path. This endpoint can be accessed without authentication for PUBLIC plans. Requires authentication for PRIVATE/UNLISTED plans."
           }
         },
         {
@@ -529,14 +543,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Cox's Bazar Beach Relaxation\",\n  \"description\": \"Afternoon fun\",\n  \"startTime\": \"14:00\",\n  \"endTime\": \"18:00\",\n  \"location\": \"Main Beach\",\n  \"order\": 2\n}"
+              "raw": "{\n  \"dayIndex\": 1,\n  \"title\": \"Cox's Bazar Beach Relaxation\",\n  \"description\": \"Afternoon fun\",\n  \"startAt\": \"2025-09-15T14:00:00.000Z\",\n  \"endAt\": \"2025-09-15T18:00:00.000Z\",\n  \"locationId\": \"{{locationId}}\",\n  \"order\": 2\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/itinerary/{{itemId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "itinerary", "{{itemId}}"]
             },
-            "description": "Update fields for an existing itinerary item. Only send fields you want to update."
+            "description": "Update fields for an existing itinerary item. All fields optional: dayIndex (number, >= 1), title (3-200 chars), description (max 2000 chars), startAt (ISO datetime), endAt (ISO datetime, must be >= startAt), locationId (UUID), order (number, >= 0). Only send fields you want to update. itemId must be in URL path. Requires authentication and plan member/admin permission."
           }
         },
         {
@@ -564,14 +578,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "[\n  {\n    \"day\": 1,\n    \"items\": [\n      {\n        \"title\": \"Check-in at Hotel\",\n        \"description\": \"Arrival and room allocation.\",\n        \"startTime\": \"12:00\",\n        \"endTime\": \"13:00\",\n        \"location\": \"Green Valley Hotel\"\n      }\n    ]\n  },\n  {\n    \"day\": 2,\n    \"items\": []\n  }\n]\n"
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"replace\": false,\n  \"items\": [\n    {\n      \"dayIndex\": 1,\n      \"title\": \"Check-in at Hotel\",\n      \"description\": \"Arrival and room allocation.\",\n      \"startAt\": \"2025-09-15T12:00:00.000Z\",\n      \"endAt\": \"2025-09-15T13:00:00.000Z\",\n      \"locationId\": \"{{locationId}}\",\n      \"order\": 1,\n      \"id\": \"{{itemId}}\"\n    },\n    {\n      \"dayIndex\": 2,\n      \"title\": \"Beach Visit\",\n      \"description\": \"Evening at beach\",\n      \"startAt\": \"2025-09-16T17:00:00.000Z\",\n      \"endAt\": \"2025-09-16T19:00:00.000Z\",\n      \"order\": 1\n    }\n  ]\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/itinerary/bulk-upsert",
+              "raw": "{{baseUrl}}/api/v1/itinerary/bulk",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "itinerary", "bulk-upsert"]
+              "path": ["api", "v1", "itinerary", "bulk"]
             },
-            "description": "Bulk create or update multiple itinerary days/items. Useful for large edits or import/export."
+            "description": "Bulk create or update multiple itinerary items. Required: planId, items (array with at least 1 item). Optional: replace (boolean, default: false - if true, replaces all existing items). Each item in items array: dayIndex (required), title (required, 3-200 chars), description (optional, max 2000 chars), startAt (optional, ISO datetime), endAt (optional, ISO datetime), locationId (optional UUID), order (optional, >= 0), id (optional UUID - if provided, updates existing item). Requires authentication and plan member/admin permission."
           }
         },
         {
@@ -586,14 +600,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"itemOrders\": [\n    { \"itemId\": \"item1\", \"order\": 2 },\n    { \"itemId\": \"item2\", \"order\": 1 }\n  ]\n}"
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"updates\": [\n    {\n      \"id\": \"{{itemId1}}\",\n      \"dayIndex\": 1,\n      \"order\": 2\n    },\n    {\n      \"id\": \"{{itemId2}}\",\n      \"dayIndex\": 1,\n      \"order\": 1\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/itinerary/reorder",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "itinerary", "reorder"]
             },
-            "description": "Reorder itinerary items for a plan. Provide planId and new order list."
+            "description": "Reorder itinerary items for a plan. Required: planId, updates (array with at least 1 item). Each item in updates array must have: id (item ID, required), dayIndex (number, >= 1, required), order (number, >= 0, required). Updates the order and/or dayIndex for multiple items at once. Requires authentication and plan member/admin permission."
           }
         }
       ]
@@ -616,11 +630,11 @@
               "raw": "{\n  \"planId\": \"{{planId}}\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/planner/",
+              "raw": "{{baseUrl}}/api/v1/planner",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "planner"]
             },
-            "description": "Create a new AI planning session. Returns session object with id, initial question, and remaining AI uses. Optional: link to existing plan via planId. Requires authentication."
+            "description": "Create a new AI planning session. Returns session object with id, initial question, and remaining AI uses. Optional: link to existing plan via planId in body. Requires authentication."
           }
         },
         {
@@ -686,33 +700,33 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/planner/?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "raw": "{{baseUrl}}/api/v1/planner?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "planner"],
               "query": [
                 {
                   "key": "page",
                   "value": "1",
-                  "description": "Page number (default: 1)"
+                  "description": "Page number (optional)"
                 },
                 {
                   "key": "limit",
                   "value": "10",
-                  "description": "Items per page (default: 10)"
+                  "description": "Items per page (optional)"
                 },
                 {
                   "key": "sortBy",
                   "value": "createdAt",
-                  "description": "Sort field (default: createdAt)"
+                  "description": "Sort field (optional)"
                 },
                 {
                   "key": "sortOrder",
                   "value": "desc",
-                  "description": "Sort order: asc or desc (default: desc)"
+                  "description": "Sort order: asc or desc (optional)"
                 }
               ]
             },
-            "description": "Get all planning sessions for authenticated user with pagination. Query params: page, limit, sortBy, sortOrder. Returns sessions list with meta (pagination info). Requires authentication."
+            "description": "Get all planning sessions for authenticated user with pagination. Query params: page (optional), limit (optional), sortBy (optional), sortOrder (optional, asc/desc). Returns sessions list with meta (pagination info). Requires authentication."
           }
         }
       ]
@@ -1171,14 +1185,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"title\": \"Lunch\",\n  \"amount\": 1200,\n  \"currency\": \"BDT\",\n  \"category\": \"FOOD\",\n  \"splitType\": \"EQUAL\",\n  \"participants\": [\"userId1\", \"userId2\"],\n  \"date\": \"2025-09-21\",\n  \"description\": \"Lunch at beachside restaurant.\"\n}"
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"payerId\": \"{{payerId}}\",\n  \"amount\": 1200,\n  \"currency\": \"BDT\",\n  \"category\": \"FOOD\",\n  \"expenseDate\": \"2025-09-21\",\n  \"splitType\": \"EQUAL\",\n  \"description\": \"Lunch at beachside restaurant.\",\n  \"participants\": [\n    {\n      \"userId\": \"{{userId1}}\"\n    },\n    {\n      \"userId\": \"{{userId2}}\"\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/expenses",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "expenses"]
             },
-            "description": "Create a new expense for a plan. Supports splitType (EQUAL, CUSTOM, PERCENTAGE)."
+            "description": "Create a new expense for a plan. Required: planId, payerId, amount, category, expenseDate, splitType. Optional: currency, description (max 1000 chars), locationId, participants. splitType: EQUAL (participants optional, split equally), CUSTOM (participants required with amount field, sum must equal total), PERCENTAGE (participants required with percentage field, sum must equal 100). participants is array of objects with userId and optional amount/percentage. Requires authentication."
           }
         },
         {
@@ -1187,17 +1201,77 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/expenses?planId={{planId}}",
+              "raw": "{{baseUrl}}/api/v1/expenses?planId={{planId}}&page=1&limit=10",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "expenses"],
               "query": [
                 {
                   "key": "planId",
                   "value": "{{planId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "",
+                  "description": "Sort field (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "asc or desc (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "searchTerm",
+                  "value": "",
+                  "description": "Search in description (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "category",
+                  "value": "",
+                  "description": "FOOD, TRANSPORT, ACCOMMODATION, ACTIVITY, SHOPPING, OTHER (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "payerId",
+                  "value": "",
+                  "description": "Filter by payer ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "splitType",
+                  "value": "",
+                  "description": "EQUAL, CUSTOM, PERCENTAGE (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "",
+                  "description": "Filter from date (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "",
+                  "description": "Filter to date (optional)",
+                  "disabled": true
                 }
               ]
             },
-            "description": "Get all expenses for a specific plan (filterable, paginated)."
+            "description": "Get all expenses with pagination and filters. Query params: page, limit, sortBy, sortOrder, searchTerm (searches description), category, planId, payerId, splitType, startDate, endDate. Requires authentication."
           }
         },
         {
@@ -1210,7 +1284,29 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "expenses", "{{expenseId}}"]
             },
-            "description": "Update fields of an existing expense. Only include fields you want to change."
+            "description": "Get single expense by ID. Returns expense with payer, plan, participants, location, and summary. Requires authentication."
+          }
+        },
+        {
+          "name": "Update Expense",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1500,\n  \"category\": \"FOOD\",\n  \"description\": \"Updated expense description\",\n  \"expenseDate\": \"2025-09-22\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expenses", "{{expenseId}}"]
+            },
+            "description": "Update expense details. All fields optional: payerId, amount, currency, category, description (max 1000 chars), expenseDate, locationId. Note: planId and splitType cannot be updated. expenseId must be in URL path. Requires authentication (creator or plan admin only)."
           }
         },
         {
@@ -1230,22 +1326,13 @@
           "name": "Settle Expense",
           "request": {
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"fromUserId\": \"userId1\",\n  \"toUserId\": \"userId2\",\n  \"amount\": 600\n}"
-            },
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/expenses/settle",
+              "raw": "{{baseUrl}}/api/v1/expenses/{{expenseId}}/settle/{{participantId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "expenses", "settle"]
+              "path": ["api", "v1", "expenses", "{{expenseId}}", "settle", "{{participantId}}"]
             },
-            "description": "Record settlement/payment between members for a plan. Used to keep track of who owes whom."
+            "description": "Mark an expense participant as settled (paid). expenseId and participantId (ExpenseParticipant ID, not userId) must be in URL path. No body needed. Requires authentication."
           }
         },
         {
@@ -1264,7 +1351,7 @@
                 }
               ]
             },
-            "description": "Get summary/breakdown of all expenses, debts, settlements for a plan."
+            "description": "Get expense summary for a plan. Returns total expenses, breakdown by category, breakdown by payer, settlement calculations (who owes whom with net amounts), and budget comparison. planId is required as query param. Requires authentication."
           }
         }
       ]
@@ -1321,29 +1408,129 @@
           }
         },
         {
+          "name": "Get Single Subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subscriptions/{{subscriptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "subscriptions", "{{subscriptionId}}"]
+            },
+            "description": "Get single subscription by ID. subscriptionId must be a valid UUID. Requires authentication."
+          }
+        },
+        {
+          "name": "Update Subscription",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cancelAtPeriodEnd\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subscriptions/{{subscriptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "subscriptions", "{{subscriptionId}}"]
+            },
+            "description": "Update subscription settings. cancelAtPeriodEnd (optional boolean): if true, subscription will cancel at the end of the current billing period. subscriptionId must be a valid UUID. Requires authentication."
+          }
+        },
+        {
           "name": "Subscription History (Admin)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/subscriptions",
+              "raw": "{{baseUrl}}/api/v1/subscriptions?page=1&limit=10&status=ACTIVE&planType=MONTHLY",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "subscriptions"]
+              "path": ["api", "v1", "subscriptions"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "Filter by status: ACTIVE, PAST_DUE, CANCELLED, EXPIRED (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "planType",
+                  "value": "MONTHLY",
+                  "description": "Filter by plan type: MONTHLY or YEARLY (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "planName",
+                  "value": "",
+                  "description": "Filter by plan name (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (optional)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "",
+                  "description": "Sort field (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "",
+                  "description": "Sort order: asc or desc (optional)",
+                  "disabled": true
+                }
+              ]
             },
-            "description": "Get all subscriptions in the system (admin only; query params supported)."
+            "description": "Get all subscriptions in the system (admin only). Query params: status (ACTIVE, PAST_DUE, CANCELLED, EXPIRED), planType (MONTHLY, YEARLY), planName, page, limit, sortBy, sortOrder. Returns subscriptions list with pagination meta. Requires ADMIN role."
           }
         },
         {
-          "name": "Get All Payments (Admin)",
+          "name": "Stripe Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "stripe-signature",
+                "value": "{{stripeSignature}}",
+                "description": "Stripe signature header for webhook verification"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"customer.subscription.created\",\n  \"data\": {}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subscriptions/webhook",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "subscriptions", "webhook"]
+            },
+            "description": "Stripe webhook endpoint for subscription events (no authentication required). Requires stripe-signature header for verification. Body is raw JSON from Stripe. Used internally by Stripe to notify about subscription changes."
+          }
+        },
+        {
+          "name": "Get Single Payment",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/payments",
+              "raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "payments"]
+              "path": ["api", "v1", "payments", "{{paymentId}}"]
             },
-            "description": "Get all payment transactions (admin only). Filterable by user/plans."
+            "description": "Get single payment by ID. paymentId must be a valid UUID. Requires authentication."
           }
         },
         {
@@ -1352,63 +1539,341 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/payments/me",
+              "raw": "{{baseUrl}}/api/v1/payments/my-payments?page=1&limit=10&status=SUCCEEDED",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "payments", "me"]
+              "path": ["api", "v1", "payments", "my-payments"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "SUCCEEDED",
+                  "description": "Filter by status: SUCCEEDED, PENDING, REFUNDED, FAILED (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "subscriptionId",
+                  "value": "",
+                  "description": "Filter by subscription ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "currency",
+                  "value": "",
+                  "description": "Filter by currency code (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "",
+                  "description": "Filter by start date (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "",
+                  "description": "Filter by end date (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (optional)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "",
+                  "description": "Sort field (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "",
+                  "description": "Sort order: asc or desc (optional)",
+                  "disabled": true
+                }
+              ]
             },
-            "description": "Get authenticated user's payment history."
+            "description": "Get authenticated user's payment history with pagination and filters. Query params: status (SUCCEEDED, PENDING, REFUNDED, FAILED), subscriptionId (UUID), currency, startDate, endDate, page, limit, sortBy, sortOrder. Returns payments list with pagination meta. Requires authentication."
+          }
+        },
+        {
+          "name": "Get Payment Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/summary?subscriptionId={{subscriptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "summary"],
+              "query": [
+                {
+                  "key": "subscriptionId",
+                  "value": "{{subscriptionId}}",
+                  "description": "Filter by subscription ID (UUID, optional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get payment summary statistics for authenticated user. Optional query param: subscriptionId (UUID). Returns summary data. Requires authentication."
+          }
+        },
+        {
+          "name": "Get All Payments (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments?page=1&limit=10&status=SUCCEEDED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "SUCCEEDED",
+                  "description": "Filter by status: SUCCEEDED, PENDING, REFUNDED, FAILED (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "description": "Filter by user ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "subscriptionId",
+                  "value": "",
+                  "description": "Filter by subscription ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "currency",
+                  "value": "",
+                  "description": "Filter by currency code (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "",
+                  "description": "Filter by start date (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "",
+                  "description": "Filter by end date (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (optional)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "",
+                  "description": "Sort field (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "",
+                  "description": "Sort order: asc or desc (optional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all payment transactions (admin only) with pagination and filters. Query params: status (SUCCEEDED, PENDING, REFUNDED, FAILED), userId (UUID), subscriptionId (UUID), currency, startDate, endDate, page, limit, sortBy, sortOrder. Returns payments list with pagination meta. Requires ADMIN role."
+          }
+        },
+        {
+          "name": "Get Payment Statistics (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/statistics?startDate=2025-01-01&endDate=2025-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "statistics"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Filter by start date (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "description": "Filter by end date (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "subscriptionId",
+                  "value": "",
+                  "description": "Filter by subscription ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "currency",
+                  "value": "",
+                  "description": "Filter by currency code (optional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get payment statistics (admin only). Query params: startDate, endDate, subscriptionId (UUID), currency. Returns aggregated payment statistics. Requires ADMIN role."
           }
         },
         {
           "name": "Upload Media File",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "multipart/form-data"
-              }
-            ],
+            "header": [],
             "body": {
               "mode": "formdata",
               "formdata": [
                 {
-                  "key": "planId",
-                  "type": "text",
-                  "value": "{{planId}}"
+                  "key": "files",
+                  "type": "file",
+                  "src": "",
+                  "description": "File to upload (can upload multiple files, max 10)"
                 },
                 {
-                  "key": "file",
+                  "key": "files",
                   "type": "file",
-                  "src": ""
+                  "src": "",
+                  "description": "Additional file (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "planId",
+                  "type": "text",
+                  "value": "{{planId}}",
+                  "description": "Associate with plan (UUID, optional - at least one of planId, meetupId, or itineraryItemId required)"
+                },
+                {
+                  "key": "meetupId",
+                  "type": "text",
+                  "value": "",
+                  "description": "Associate with meetup (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "itineraryItemId",
+                  "type": "text",
+                  "value": "",
+                  "description": "Associate with itinerary item (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "type": "text",
+                  "value": "photo",
+                  "description": "Media type: photo or video (optional)",
+                  "disabled": true
                 }
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/media/upload",
+              "raw": "{{baseUrl}}/api/v1/media",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "media", "upload"]
+              "path": ["api", "v1", "media"]
             },
-            "description": "Upload a media file (Cloudinary integration). Attach planId and file."
+            "description": "Upload media files (Cloudinary integration). Supports multiple files (max 10). Form-data fields: files (file, required, can be multiple), planId (UUID, optional), meetupId (UUID, optional), itineraryItemId (UUID, optional), type (photo/video, optional). At least one of planId, meetupId, or itineraryItemId must be provided. Requires authentication."
           }
         },
         {
-          "name": "List Media Files For Plan",
+          "name": "Get Single Media",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/media?planId={{planId}}",
+              "raw": "{{baseUrl}}/api/v1/media/{{mediaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "media", "{{mediaId}}"]
+            },
+            "description": "Get single media by ID. mediaId must be a valid UUID. Returns media details including URL, type, and associated entity. Requires authentication."
+          }
+        },
+        {
+          "name": "List Media Files",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media?planId={{planId}}&type=photo&page=1&limit=10",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "media"],
               "query": [
                 {
+                  "key": "type",
+                  "value": "photo",
+                  "description": "Filter by type: photo or video (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "ownerId",
+                  "value": "",
+                  "description": "Filter by owner ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
                   "key": "planId",
-                  "value": "{{planId}}"
+                  "value": "{{planId}}",
+                  "description": "Filter by plan ID (UUID, optional)"
+                },
+                {
+                  "key": "meetupId",
+                  "value": "",
+                  "description": "Filter by meetup ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "itineraryItemId",
+                  "value": "",
+                  "description": "Filter by itinerary item ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "provider",
+                  "value": "",
+                  "description": "Filter by provider (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (optional)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "",
+                  "description": "Sort field (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "",
+                  "description": "Sort order: asc or desc (optional)",
+                  "disabled": true
                 }
               ]
             },
-            "description": "List all media files for a plan."
+            "description": "List all media files with pagination and filters. Query params: type (photo, video), ownerId (UUID), planId (UUID), meetupId (UUID), itineraryItemId (UUID), provider, page, limit, sortBy, sortOrder. Returns media list with pagination meta. Requires authentication."
           }
         },
         {
@@ -1436,37 +1901,133 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"targetType\": \"USER\",\n  \"targetId\": \"{{userId}}\",\n  \"rating\": 5,\n  \"comment\": \"Great travel companion!\"\n}"
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Great travel companion!\",\n  \"source\": \"USER_TO_USER\",\n  \"reviewedUserId\": \"{{userId}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/reviews",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "reviews"]
             },
-            "description": "Create a review. targetType: USER or PLAN."
+            "description": "Create a review. Required: rating (1-5 integer), source (\"USER_TO_USER\" or \"USER_TO_TRIP\"). Optional: comment (string). If source is \"USER_TO_USER\", reviewedUserId (UUID) is required. If source is \"USER_TO_TRIP\", planId (UUID) is required. Requires authentication."
           }
         },
         {
-          "name": "List Reviews (By User or Plan)",
+          "name": "Get Review Statistics",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/reviews?targetType=USER&targetId={{userId}}",
+              "raw": "{{baseUrl}}/api/v1/reviews/statistics?userId={{userId}}&planId={{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "reviews", "statistics"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}",
+                  "description": "Filter by user ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "planId",
+                  "value": "{{planId}}",
+                  "description": "Filter by plan ID (UUID, optional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get review statistics. Optional query params: userId (UUID), planId (UUID). Returns aggregated review statistics. Requires authentication."
+          }
+        },
+        {
+          "name": "Get Single Review",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/{{reviewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "reviews", "{{reviewId}}"]
+            },
+            "description": "Get single review by ID. reviewId must be a valid UUID. Returns review details with reviewer and reviewed entity information. Requires authentication."
+          }
+        },
+        {
+          "name": "List Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews?rating=5&source=USER_TO_USER&reviewedUserId={{userId}}&page=1&limit=10",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "reviews"],
               "query": [
                 {
-                  "key": "targetType",
-                  "value": "USER"
+                  "key": "rating",
+                  "value": "5",
+                  "description": "Filter by rating (1-5, optional)",
+                  "disabled": true
                 },
                 {
-                  "key": "targetId",
-                  "value": "{{userId}}"
+                  "key": "source",
+                  "value": "USER_TO_USER",
+                  "description": "Filter by source: USER_TO_USER or USER_TO_TRIP (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "reviewerId",
+                  "value": "",
+                  "description": "Filter by reviewer ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "reviewedUserId",
+                  "value": "{{userId}}",
+                  "description": "Filter by reviewed user ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "planId",
+                  "value": "",
+                  "description": "Filter by plan ID (UUID, optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "isEdited",
+                  "value": "",
+                  "description": "Filter by edited status: true or false (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "searchTerm",
+                  "value": "",
+                  "description": "Search in comments (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (optional)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "",
+                  "description": "Sort field (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "",
+                  "description": "Sort order: asc or desc (optional)",
+                  "disabled": true
                 }
               ]
             },
-            "description": "List all reviews for a user or plan. Use targetType=USER or PLAN, and targetId."
+            "description": "List all reviews with pagination and filters. Query params: rating (1-5), source (USER_TO_USER, USER_TO_TRIP), reviewerId (UUID), reviewedUserId (UUID), planId (UUID), isEdited (true/false), searchTerm (searches comments), page, limit, sortBy, sortOrder. Returns reviews list with pagination meta. Requires authentication."
           }
         },
         {
