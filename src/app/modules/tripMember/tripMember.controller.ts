@@ -6,7 +6,10 @@ import { TAuthUser } from "./tripMember.interface";
 
 const addMember = catchAsync(async (req, res) => {
     const authUser = req.user as TAuthUser;
-    const result = await TripMemberService.addMember(authUser, req.body);
+    const result = await TripMemberService.addMember(authUser, {
+        ...req.body,
+        planId: req.params.planId
+    });
 
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
@@ -32,8 +35,10 @@ const updateMemberRole = catchAsync(async (req, res) => {
     const authUser = req.user as TAuthUser;
     const result = await TripMemberService.updateMemberRole(
         authUser,
-        req.params.id,
-        req.body
+        {
+            ...req.body,
+            planId: req.params.planId
+        }
     );
 
     sendResponse(res, {

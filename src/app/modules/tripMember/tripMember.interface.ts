@@ -8,11 +8,13 @@ export type TAuthUser = {
 
 export type TAddMemberPayload = {
     planId: string;
-    userId: string;
+    email: string;
     role: TripRole;
 };
 
 export type TUpdateRolePayload = {
+    planId: string;
+    userId: string;
     role: TripRole;
 };
 

@@ -469,7 +469,7 @@ const getMessages = async (
   // Check read permission
   await assertThreadPermission(authUser, threadId, "read");
 
-  const limit = query.limit || MESSAGE_PAGE_SIZE;
+  const limit = query.limit ? Number(query.limit) : MESSAGE_PAGE_SIZE;
   const cursor = query.cursor ? new Date(query.cursor) : undefined;
 
   // Build where clause
@@ -487,7 +487,7 @@ const getMessages = async (
   // Fetch one extra to determine if there's a next page
   const messages = await prisma.message.findMany({
     where,
-    take: limit + 1,
+    take: Number(limit) + 1,
     orderBy: {
       createdAt: "desc"
     },

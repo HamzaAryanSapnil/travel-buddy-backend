@@ -4,49 +4,63 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
-const http_status_1 = __importDefault(require("http-status"));
+const zod_1 = require("zod");
+const ApiError_1 = __importDefault(require("../errors/ApiError"));
+const handleClientError_1 = __importDefault(require("../errors/handleClientError"));
+const handleValidationError_1 = __importDefault(require("../errors/handleValidationError"));
+const handleZodError_1 = __importDefault(require("../errors/handleZodError"));
 const globalErrorHandler = (err, req, res, next) => {
-    console.log(err);
-    let statusCode = err.statusCode || http_status_1.default.INTERNAL_SERVER_ERROR;
-    let success = false;
-    let message = err.message || "Something went wrong!";
-    let error = err;
-    if (err instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-        if (err.code === "P2002") {
-            message = "Duplicate key error",
-                error = err.meta,
-                statusCode = http_status_1.default.CONFLICT;
-        }
-        if (err.code === "P1000") {
-            message = "Authentication failed against database server",
-                error = err.meta,
-                statusCode = http_status_1.default.BAD_GATEWAY;
-        }
-        if (err.code === "P2003") {
-            message = "Foreign key constraint failed",
-                error = err.meta,
-                statusCode = http_status_1.default.BAD_REQUEST;
-        }
+    // config.env === 'development' ? console.log('🚀 globalErrorHandler ~~ ', err) : errorLogger.error('🚀 globalErrorHandler ~~ ', err);
+    console.log("🚀 globalErrorHandler ~~ ", err);
+    let statusCode = 500;
+    let message = "Something went wrong!";
+    let errorMessages = [];
+    if (err instanceof zod_1.ZodError) {
+        const simplifiedError = (0, handleZodError_1.default)(err);
+        statusCode = simplifiedError.statusCode;
+        message = simplifiedError.message;
+        errorMessages = simplifiedError.errorMessages;
     }
     else if (err instanceof client_1.Prisma.PrismaClientValidationError) {
-        message = "Validation Error",
-            error = err.message,
-            statusCode = http_status_1.default.BAD_REQUEST;
+        const simplifiedError = (0, handleValidationError_1.default)(err);
+        statusCode = simplifiedError.statusCode;
+        message = simplifiedError.message;
+        errorMessages = simplifiedError.errorMessages;
     }
-    else if (err instanceof client_1.Prisma.PrismaClientUnknownRequestError) {
-        message = "Unknown Prisma error occured!",
-            error = err.message,
-            statusCode = http_status_1.default.BAD_REQUEST;
+    else if (err instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+        const simplifiedError = (0, handleClientError_1.default)(err);
+        statusCode = simplifiedError.statusCode;
+        message = simplifiedError.message;
+        errorMessages = simplifiedError.errorMessages;
     }
-    else if (err instanceof client_1.Prisma.PrismaClientInitializationError) {
-        message = "Prisma client failed to initialize!",
-            error = err.message,
-            statusCode = http_status_1.default.BAD_REQUEST;
+    else if (err instanceof ApiError_1.default) {
+        statusCode = err.statusCode;
+        message = err.message;
+        errorMessages = (err === null || err === void 0 ? void 0 : err.message)
+            ? [
+                {
+                    path: "",
+                    message: err === null || err === void 0 ? void 0 : err.message,
+                },
+            ]
+            : [];
+    }
+    else if (err instanceof Error) {
+        message = err.message;
+        errorMessages = (err === null || err === void 0 ? void 0 : err.message)
+            ? [
+                {
+                    path: "",
+                    message: err === null || err === void 0 ? void 0 : err.message,
+                },
+            ]
+            : [];
     }
     res.status(statusCode).json({
-        success,
+        success: false,
         message,
-        error
+        errorMessages,
+        stack: process.env.NODE_ENV !== "production" ? err === null || err === void 0 ? void 0 : err.stack : undefined,
     });
 };
 exports.default = globalErrorHandler;

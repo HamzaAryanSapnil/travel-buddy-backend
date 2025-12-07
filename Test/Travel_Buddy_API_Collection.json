@@ -282,14 +282,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Spring Trip to Cox's Bazar\",\n  \"destination\": \"Cox's Bazar, Bangladesh\",\n  \"origin\": \"Dhaka, Bangladesh\",\n  \"startDate\": \"2025-09-15\",\n  \"endDate\": \"2025-09-21\",\n  \"travelType\": \"FRIEND_GROUP\", \n  \"budgetMin\": 5000,\n  \"budgetMax\": 12000,\n  \"visibility\": \"PUBLIC\",\n  \"description\": \"An awesome week-long trip!\",\n  \"coverPhoto\": \"https://my-cloudinary-url/trip-photo.jpg\"\n}"
+              "raw": "{\n  \"title\": \"Spring Trip to Cox's Bazar\",\n  \"destination\": \"Cox's Bazar, Bangladesh\",\n  \"origin\": \"Dhaka, Bangladesh\",\n  \"startDate\": \"2025-09-15\",\n  \"endDate\": \"2025-09-21\",\n  \"travelType\": \"FRIENDS\", \n  \"budgetMin\": 5000,\n  \"budgetMax\": 12000,\n  \"visibility\": \"PUBLIC\",\n  \"description\": \"An awesome week-long trip!\",\n  \"coverPhoto\": \"https://my-cloudinary-url/trip-photo.jpg\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/travel-plans",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "travel-plans"]
             },
-            "description": "Create a new travel plan. All fields are required except coverPhoto. Requires authentication."
+            "description": "Create a new travel plan. All fields are required except coverPhoto. startDate must be a future date - past dates are not allowed. endDate must be >= startDate. Requires authentication."
           }
         },
         {
@@ -367,7 +367,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "travel-plans", "{{planId}}"]
             },
-            "description": "Update a travel plan. Only allowed for the plan owner or admins. All fields optional, only send what you want to update."
+            "description": "Update a travel plan. Only allowed for the plan owner or admins. All fields optional, only send what you want to update. If updating startDate, it must be a future date - past dates are not allowed. This allows converting past plans to future plans. endDate must be >= startDate."
           }
         },
         {
@@ -435,36 +435,27 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"memberUserId\",\n  \"role\": \"ADMIN\"\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"ADMIN\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/trip-members/{{planId}}/update-role",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "trip-members", "{{planId}}", "update-role"]
             },
-            "description": "Update a member's role in a trip (e.g. from MEMBER to ADMIN). Requires manager/admin rights on the travel plan."
+            "description": "Update a member's role in a trip (e.g. from VIEWER to ADMIN). Requires manager/admin rights on the travel plan. userId is the user's UUID."
           }
         },
         {
           "name": "Remove Member from Plan",
           "request": {
             "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"memberUserId\"\n}"
-            },
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/trip-members/{{planId}}/remove",
+              "raw": "{{baseUrl}}/api/v1/trip-members/{{memberId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "trip-members", "{{planId}}", "remove"]
+              "path": ["api", "v1", "trip-members", "{{memberId}}"]
             },
-            "description": "Remove user from trip. Managers/admins only. userId in body, planId in path."
+            "description": "Remove user from trip by tripMemberId (not userId). Managers/admins only."
           }
         }
       ]
@@ -622,14 +613,58 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\"\n}"
+              "raw": "{\n  \"planId\": \"{{planId}}\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/planner/session/complete",
+              "raw": "{{baseUrl}}/api/v1/planner/",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "planner", "session", "complete"]
+              "path": ["api", "v1", "planner"]
             },
-            "description": "Complete the active AI planning session and get the generated itinerary. Requires authentication."
+            "description": "Create a new AI planning session. Returns session object with id, initial question, and remaining AI uses. Optional: link to existing plan via planId. Requires authentication."
+          }
+        },
+        {
+          "name": "Add Step to Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"What is your travel destination?\",\n  \"answer\": \"Cox's Bazar\",\n  \"uiStep\": \"destination\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/planner/{{sessionId}}/step",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "planner", "{{sessionId}}", "step"]
+            },
+            "description": "Add a step (Q&A) to the planning session. Returns next question and UI step. uiStep must be one of: destination, groupSize, budget, tripDuration, interests, specialRequirements, Final. Requires authentication."
+          }
+        },
+        {
+          "name": "Complete Planning Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"finalOutput\": {\n    \"title\": \"Spring Trip to Cox's Bazar\",\n    \"destination\": \"Cox's Bazar, Bangladesh\",\n    \"origin\": \"Dhaka, Bangladesh\",\n    \"startDate\": \"2025-09-15\",\n    \"endDate\": \"2025-09-21\",\n    \"budgetMin\": 5000,\n    \"budgetMax\": 12000,\n    \"travelType\": \"FRIENDS\",\n    \"description\": \"An awesome week-long trip to the longest beach in the world!\",\n    \"itinerary\": [\n      {\n        \"dayIndex\": 1,\n        \"items\": [\n          {\n            \"title\": \"Arrival and Check-in\",\n            \"description\": \"Check-in at hotel and rest after travel\",\n            \"startAt\": \"2025-09-15T12:00:00.000Z\",\n            \"endAt\": \"2025-09-15T14:00:00.000Z\",\n            \"location\": \"Hotel Sea Crown\"\n          },\n          {\n            \"title\": \"Beach Walk\",\n            \"description\": \"Evening walk along the beach\",\n            \"startAt\": \"2025-09-15T17:00:00.000Z\",\n            \"endAt\": \"2025-09-15T19:00:00.000Z\"\n          }\n        ]\n      },\n      {\n        \"dayIndex\": 2,\n        \"items\": [\n          {\n            \"title\": \"Inani Beach Visit\",\n            \"description\": \"Visit the coral beach\",\n            \"startAt\": \"2025-09-16T09:00:00.000Z\",\n            \"endAt\": \"2025-09-16T18:00:00.000Z\"\n          }\n        ]\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/planner/{{sessionId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "planner", "{{sessionId}}", "complete"]
+            },
+            "description": "Complete the planning session and create TravelPlan + ItineraryItems. sessionId must be in URL path. finalOutput must include title, destination, startDate, endDate, travelType, and itinerary array. travelType: SOLO, COUPLE, FAMILY, FRIENDS, GROUP. Requires authentication."
           }
         },
         {
@@ -638,11 +673,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/planner/session/{{sessionId}}",
+              "raw": "{{baseUrl}}/api/v1/planner/{{sessionId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "planner", "session", "{{sessionId}}"]
+              "path": ["api", "v1", "planner", "{{sessionId}}"]
             },
-            "description": "Get all info and messages for a planning session. Requires authentication."
+            "description": "Get single planning session by ID. Returns session with promptFlow (Q&A history), finalOutput, and uiState. Requires authentication."
           }
         },
         {
@@ -651,11 +686,33 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/planner/sessions",
+              "raw": "{{baseUrl}}/api/v1/planner/?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "planner", "sessions"]
+              "path": ["api", "v1", "planner"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort field (default: createdAt)"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc or desc (default: desc)"
+                }
+              ]
             },
-            "description": "Get list of all AI planning sessions for the authenticated user. Accepts pagination/query params. Requires authentication."
+            "description": "Get all planning sessions for authenticated user with pagination. Query params: page, limit, sortBy, sortOrder. Returns sessions list with meta (pagination info). Requires authentication."
           }
         }
       ]
@@ -675,14 +732,27 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"memberIds\": [\"userId1\", \"userId2\"]\n}"
+              "raw": "{\n  \"type\": \"PLAN\",\n  \"refId\": \"{{planId}}\",\n  \"title\": \"Trip Planning Chat\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/chat/create-thread",
+              "raw": "{{baseUrl}}/api/v1/chat/threads",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "chat", "create-thread"]
+              "path": ["api", "v1", "chat", "threads"]
             },
-            "description": "Create a new chat thread for a plan with selected members. Requires authentication. Only one thread per plan."
+            "description": "Create a new chat thread for a plan. type must be \"PLAN\", refId is the planId, title is optional. Members are added separately via Add Member endpoint. Requires authentication."
+          }
+        },
+        {
+          "name": "Get Thread By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "threads", "{{threadId}}"]
+            },
+            "description": "Get chat thread details by thread ID. Returns thread with members list. Requires authentication."
           }
         },
         {
@@ -691,36 +761,24 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/chat/plan/{{planId}}",
+              "raw": "{{baseUrl}}/api/v1/chat/threads?planId={{planId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "chat", "plan", "{{planId}}"]
-            },
-            "description": "Get chat thread details for a given plan. Requires authentication."
-          }
-        },
-        {
-          "name": "Find Direct Thread/Member Thread",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/chat/find-thread?userId={{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "chat", "find-thread"],
+              "path": ["api", "v1", "chat", "threads"],
               "query": [
                 {
-                  "key": "userId",
-                  "value": "{{userId}}"
+                  "key": "planId",
+                  "value": "{{planId}}",
+                  "description": "Plan ID to find thread for"
                 }
               ]
             },
-            "description": "Find direct thread between users by userId (for direct chat)."
+            "description": "Find chat thread by plan ID using query parameter. Returns thread details if found, 404 if not found. Requires authentication."
           }
         },
         {
           "name": "Add Member to Thread",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
@@ -729,14 +787,40 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"threadId\": \"{{threadId}}\",\n  \"userId\": \"userId3\"\n}"
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"role\": \"member\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/chat/add-member",
+              "raw": "{{baseUrl}}/api/v1/chat/threads/{{threadId}}/members",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "chat", "add-member"]
+              "path": ["api", "v1", "chat", "threads", "{{threadId}}", "members"]
             },
-            "description": "Add new member to a chat thread. Needs threadId and userId."
+            "description": "Add a new member to a chat thread. threadId must be in URL path. role must be one of: owner, admin, member. Requires authentication."
+          }
+        },
+        {
+          "name": "Get Messages in Thread",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/threads/{{threadId}}/messages?limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "threads", "{{threadId}}", "messages"],
+              "query": [
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "description": "ISO datetime string for cursor pagination (optional, use nextCursor from previous response)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "description": "Number of messages per page (1-100, default: 30)"
+                }
+              ]
+            },
+            "description": "Get messages from a thread using cursor pagination. cursor is optional ISO datetime string (use nextCursor from previous response). limit: 1-100, default 30. Returns items array and nextCursor. Requires authentication."
           }
         },
         {
@@ -751,27 +835,49 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"threadId\": \"{{threadId}}\",\n  \"message\": \"Hello everyone!\"\n}"
+              "raw": "{\n  \"content\": \"Hello everyone!\",\n  \"attachments\": [\n    {\n      \"url\": \"https://example.com/image.jpg\",\n      \"type\": \"image/jpeg\"\n    }\n  ]\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/chat/send-message",
+              "raw": "{{baseUrl}}/api/v1/chat/threads/{{threadId}}/messages",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "chat", "send-message"]
+              "path": ["api", "v1", "chat", "threads", "{{threadId}}", "messages"]
             },
-            "description": "Send a message to a chat thread."
+            "description": "Send a message to a chat thread. threadId must be in URL path. content is required (1-5000 chars). attachments is optional array (max 10 items) with url (required) and type (optional). Requires authentication."
           }
         },
         {
-          "name": "List Messages in Thread",
+          "name": "Edit Message",
           "request": {
-            "method": "GET",
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated message content\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/messages/{{messageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "messages", "{{messageId}}"]
+            },
+            "description": "Edit a message. messageId must be in URL path. content is required (1-5000 chars). Can only edit own messages within 15 minutes of sending. Requires authentication."
+          }
+        },
+        {
+          "name": "Delete Message",
+          "request": {
+            "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/chat/messages/{{threadId}}",
+              "raw": "{{baseUrl}}/api/v1/chat/messages/{{messageId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "chat", "messages", "{{threadId}}"]
+              "path": ["api", "v1", "chat", "messages", "{{messageId}}"]
             },
-            "description": "Get all messages for a thread (paginated). Requires authentication."
+            "description": "Soft delete a message. messageId must be in URL path. Can only delete own messages. Requires authentication."
           }
         }
       ]
@@ -785,11 +891,66 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/notifications",
+              "raw": "{{baseUrl}}/api/v1/notifications?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "notifications"]
+              "path": ["api", "v1", "notifications"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (optional)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort field (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "asc or desc (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "NotificationType enum (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "isRead",
+                  "value": "",
+                  "description": "true or false (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "searchTerm",
+                  "value": "",
+                  "description": "Search in title/message (optional)",
+                  "disabled": true
+                }
+              ]
             },
-            "description": "Get all notifications for the authenticated user (paginated, filterable)."
+            "description": "Get all notifications for authenticated user with pagination and filters. Query params: page, limit, sortBy (default: createdAt), sortOrder (asc/desc), type (NotificationType enum), isRead (true/false), searchTerm (searches title and message). Requires authentication."
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notifications", "{{notificationId}}", "read"]
+            },
+            "description": "Mark a single notification as read. notificationId must be in URL path. Requires authentication."
           }
         },
         {
@@ -798,24 +959,24 @@
             "method": "PATCH",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/notifications/mark-all-read",
+              "raw": "{{baseUrl}}/api/v1/notifications/read-all",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "notifications", "mark-all-read"]
+              "path": ["api", "v1", "notifications", "read-all"]
             },
-            "description": "Mark all notifications as read for authenticated user."
+            "description": "Mark all notifications as read for authenticated user. No body or params needed. Requires authentication."
           }
         },
         {
-          "name": "Clear All Notifications",
+          "name": "Get Unread Count",
           "request": {
-            "method": "DELETE",
+            "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/notifications/clear-all",
+              "raw": "{{baseUrl}}/api/v1/notifications/unread-count",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "notifications", "clear-all"]
+              "path": ["api", "v1", "notifications", "unread-count"]
             },
-            "description": "Delete all notifications for the authenticated user."
+            "description": "Get count of unread notifications for authenticated user. Returns { count: number }. Requires authentication."
           }
         },
         {
@@ -830,14 +991,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"scheduledAt\": \"2025-09-20T16:00:00.000Z\",\n  \"location\": \"Cafe Rio\",\n  \"maxParticipants\": 8,\n  \"description\": \"Pre-trip discussion meetup.\"\n}"
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"scheduledAt\": \"2025-09-20T16:00:00.000Z\",\n  \"location\": \"Cafe Rio\",\n  \"maxParticipants\": 8\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/meetups",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "meetups"]
             },
-            "description": "Create a new meetup for a travel plan. Requires authentication."
+            "description": "Create a new meetup for a travel plan. planId and scheduledAt (ISO datetime, must be future) are required. Optional: location (max 500 chars), locationId (UUID), maxParticipants (positive integer), videoRoomLink (valid URL). Note: location and locationId are mutually exclusive - provide only one. Error will be shown if travel plan has ended (endDate < today). Requires authentication."
           }
         },
         {
@@ -846,21 +1007,76 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/meetups?planId={{planId}}",
+              "raw": "{{baseUrl}}/api/v1/meetups?planId={{planId}}&page=1&limit=10",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "meetups"],
               "query": [
                 {
                   "key": "planId",
                   "value": "{{planId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "",
+                  "description": "Sort field (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "asc or desc (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "searchTerm",
+                  "value": "",
+                  "description": "Search in location (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "PENDING, CONFIRMED, COMPLETED, CANCELLED (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "organizerId",
+                  "value": "",
+                  "description": "Filter by organizer ID (optional)",
+                  "disabled": true
                 }
               ]
             },
-            "description": "Get all meetups for a given travel plan (filterable, paginated)."
+            "description": "Get all meetups with pagination and filters. Query params: page, limit, sortBy, sortOrder, searchTerm (searches location), status (PENDING/CONFIRMED/COMPLETED/CANCELLED), planId, organizerId. Requires authentication."
           }
         },
         {
-          "name": "RSVP To Meetup",
+          "name": "Get Single Meetup",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/meetups/{{meetupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "meetups", "{{meetupId}}"]
+            },
+            "description": "Get single meetup by ID. Returns meetup with plan, organizer, and RSVPs. Requires authentication."
+          }
+        },
+        {
+          "name": "Update Meetup",
           "request": {
             "method": "PATCH",
             "header": [
@@ -871,14 +1087,36 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"GOING\" // or \"NOT_GOING\"\n}"
+              "raw": "{\n  \"scheduledAt\": \"2025-09-21T16:00:00.000Z\",\n  \"location\": \"New Location\",\n  \"maxParticipants\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/meetups/{{meetupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "meetups", "{{meetupId}}"]
+            },
+            "description": "Update meetup details. All fields optional: scheduledAt (must be future date), location (max 500 chars), locationId (UUID), maxParticipants (positive integer), videoRoomLink (valid URL). location and locationId are mutually exclusive. Requires authentication (organizer/admin only)."
+          }
+        },
+        {
+          "name": "RSVP To Meetup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACCEPTED\" // or \"DECLINED\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/meetups/{{meetupId}}/rsvp",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "meetups", "{{meetupId}}", "rsvp"]
             },
-            "description": "RSVP to a meetup (GOING or NOT_GOING)."
+            "description": "RSVP to a meetup. status must be ACCEPTED or DECLINED. meetupId must be in URL path. Requires authentication."
           }
         },
         {
@@ -893,14 +1131,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"CANCELLED\" // or \"ACTIVE\", \"COMPLETED\"\n}"
+              "raw": "{\n  \"status\": \"CONFIRMED\" // or \"PENDING\", \"COMPLETED\", \"CANCELLED\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/meetups/{{meetupId}}/status",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "meetups", "{{meetupId}}", "status"]
             },
-            "description": "Update status of a meetup (CANCELLED, ACTIVE, COMPLETED). Admin/host only."
+            "description": "Update status of a meetup. status must be one of: PENDING, CONFIRMED, COMPLETED, CANCELLED. meetupId must be in URL path. Requires authentication (organizer/admin only)."
           }
         },
         {

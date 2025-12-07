@@ -7,32 +7,31 @@ import { TripMemberValidation } from "./tripMember.validation";
 const router = express.Router();
 
 router.post(
-    "/",
-    auth("USER", "ADMIN"),
-    validateRequest(TripMemberValidation.addMember),
-    TripMemberController.addMember
+  "/:planId/add",
+  auth("USER", "ADMIN"),
+  validateRequest(TripMemberValidation.addMember),
+  TripMemberController.addMember
 );
 
 router.get(
-    "/:planId",
-    auth("USER", "ADMIN"),
-    validateRequest(TripMemberValidation.getMembers),
-    TripMemberController.getMembers
+  "/:planId",
+  auth("USER", "ADMIN"),
+  validateRequest(TripMemberValidation.getMembers),
+  TripMemberController.getMembers
 );
 
 router.patch(
-    "/:id/role",
-    auth("USER", "ADMIN"),
-    validateRequest(TripMemberValidation.updateRole),
-    TripMemberController.updateMemberRole
+  "/:planId/update-role",
+  auth("USER", "ADMIN"),
+  validateRequest(TripMemberValidation.updateRole),
+  TripMemberController.updateMemberRole
 );
 
 router.delete(
-    "/:id",
-    auth("USER", "ADMIN"),
-    validateRequest(TripMemberValidation.removeMember),
-    TripMemberController.removeMember
+  "/:id",
+  auth("USER", "ADMIN"),
+  validateRequest(TripMemberValidation.removeMember),
+  TripMemberController.removeMember
 );
 
 export const TripMemberRoutes = router;
-

@@ -102,27 +102,27 @@ const addMember = async (authUser: TAuthUser, payload: TAddMemberPayload) => {
     // Check permission to invite
     await assertTripMemberPermission(authUser, payload.planId, "canInvite");
 
+    // Find the user by email
+    const targetUser = await prisma.user.findUnique({
+        where: { email: payload.email }
+    });
+
+    if (!targetUser) {
+        throw new ApiError(httpStatus.NOT_FOUND, "User with this email not found.");
+    }
+
     // Check if user is already a member
     const existingMember = await prisma.tripMember.findUnique({
         where: {
             planId_userId: {
                 planId: payload.planId,
-                userId: payload.userId
+                userId: targetUser.id
             }
         }
     });
 
     if (existingMember) {
         throw new ApiError(httpStatus.CONFLICT, "User is already a member of this plan.");
-    }
-
-    // Validate that target user exists
-    const targetUser = await prisma.user.findUnique({
-        where: { id: payload.userId }
-    });
-
-    if (!targetUser) {
-        throw new ApiError(httpStatus.NOT_FOUND, "Target user not found.");
     }
 
     // Cannot add OWNER role (only created during plan creation)
@@ -136,7 +136,7 @@ const addMember = async (authUser: TAuthUser, payload: TAddMemberPayload) => {
     const result = await prisma.tripMember.create({
         data: {
             planId: payload.planId,
-            userId: payload.userId,
+            userId: targetUser.id,
             role: payload.role,
             status: TripStatus.JOINED,
             addedBy: authUser.userId
@@ -219,12 +219,16 @@ const getMembers = async (authUser: TAuthUser, planId: string) => {
 
 const updateMemberRole = async (
     authUser: TAuthUser,
-    memberId: string,
     payload: TUpdateRolePayload
 ) => {
-    // Get the member record
+    // Get the member record by planId and userId
     const member = await prisma.tripMember.findUnique({
-        where: { id: memberId },
+        where: {
+            planId_userId: {
+                planId: payload.planId,
+                userId: payload.userId
+            }
+        },
         include: {
             plan: {
                 select: {
@@ -259,7 +263,7 @@ const updateMemberRole = async (
     }
 
     const updated = await prisma.tripMember.update({
-        where: { id: memberId },
+        where: { id: member.id },
         data: {
             role: payload.role
         },

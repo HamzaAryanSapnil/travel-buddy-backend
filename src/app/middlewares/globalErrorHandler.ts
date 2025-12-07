@@ -1,54 +1,70 @@
 import { Prisma } from "@prisma/client";
-import { NextFunction, Request, Response } from "express"
-import httpStatus from "http-status"
+import { NextFunction, Request, Response } from "express";
+import httpStatus from "http-status";
+import { ZodError } from "zod";
+import ApiError from "../errors/ApiError";
+import handleClientError from "../errors/handleClientError";
+import handleValidationError from "../errors/handleValidationError";
+import handleZodError from "../errors/handleZodError";
+import { TGenericErrorMessage } from "../interfaces/error";
 
-const globalErrorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
-    console.log(err)
-    let statusCode: number = err.statusCode || httpStatus.INTERNAL_SERVER_ERROR;
-    let success = false;
-    let message = err.message || "Something went wrong!";
-    let error = err;
+const globalErrorHandler = (
+  err: any,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // config.env === 'development' ? console.log('🚀 globalErrorHandler ~~ ', err) : errorLogger.error('🚀 globalErrorHandler ~~ ', err);
+  console.log("🚀 globalErrorHandler ~~ ", err);
 
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === "P2002") {
-            message = "Duplicate key error",
-                error = err.meta,
-                statusCode = httpStatus.CONFLICT
-        }
-        if (err.code === "P1000") {
-            message = "Authentication failed against database server",
-                error = err.meta,
-                statusCode = httpStatus.BAD_GATEWAY
-        }
-        if (err.code === "P2003") {
-            message = "Foreign key constraint failed",
-                error = err.meta,
-                statusCode = httpStatus.BAD_REQUEST
-        }
-    }
+  let statusCode = 500;
+  let message = "Something went wrong!";
+  let errorMessages: TGenericErrorMessage[] = [];
 
-    else if (err instanceof Prisma.PrismaClientValidationError) {
-        message = "Validation Error",
-            error = err.message,
-            statusCode = httpStatus.BAD_REQUEST
-    }
-    else if (err instanceof Prisma.PrismaClientUnknownRequestError) {
-        message = "Unknown Prisma error occured!",
-            error = err.message,
-            statusCode = httpStatus.BAD_REQUEST
-    }
-    else if (err instanceof Prisma.PrismaClientInitializationError) {
-        message = "Prisma client failed to initialize!",
-            error = err.message,
-            statusCode = httpStatus.BAD_REQUEST
-    }
+  if (err instanceof ZodError) {
+    const simplifiedError = handleZodError(err);
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorMessages = simplifiedError.errorMessages;
+  } else if (err instanceof Prisma.PrismaClientValidationError) {
+    const simplifiedError = handleValidationError(err);
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorMessages = simplifiedError.errorMessages;
+  } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    const simplifiedError = handleClientError(err);
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorMessages = simplifiedError.errorMessages;
+  } else if (err instanceof ApiError) {
+    statusCode = err.statusCode;
+    message = err.message;
+    errorMessages = err?.message
+      ? [
+          {
+            path: "",
+            message: err?.message,
+          },
+        ]
+      : [];
+  } else if (err instanceof Error) {
+    message = err.message;
+    errorMessages = err?.message
+      ? [
+          {
+            path: "",
+            message: err?.message,
+          },
+        ]
+      : [];
+  }
 
-    res.status(statusCode).json({
-        success,
-        message,
-        error
-    })
+  res.status(statusCode).json({
+    success: false,
+    message,
+    errorMessages,
+    stack: process.env.NODE_ENV !== "production" ? err?.stack : undefined,
+  });
 };
 
 export default globalErrorHandler;
-

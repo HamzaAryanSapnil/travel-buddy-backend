@@ -80,9 +80,17 @@ const createTravelPlan = async (
 ) => {
   const startDate = new Date(payload.startDate);
   const endDate = new Date(payload.endDate);
+  const now = new Date();
 
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid date format.");
+  }
+
+  if (startDate <= now) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Start date must be a future date. Past dates are not allowed."
+    );
   }
 
   if (endDate < startDate) {
@@ -347,8 +355,24 @@ const updateTravelPlan = async (
       ? new Date(payload.startDate)
       : existing.startDate;
     const end = payload.endDate ? new Date(payload.endDate) : existing.endDate;
+    const now = new Date();
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Invalid date format."
+      );
+    }
+
+    // If startDate is being updated, it must be a future date
+    if (payload.startDate !== undefined && start <= now) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Start date must be a future date. Past dates are not allowed."
+      );
+    }
+
+    if (end < start) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Invalid dates. endDate must be greater than or equal to startDate."

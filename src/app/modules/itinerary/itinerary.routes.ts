@@ -30,23 +30,7 @@ router.get(
   ItineraryController.getSingleItem
 );
 
-// Update item
-router.patch(
-  "/:id",
-  auth("USER", "ADMIN"),
-  validateRequest(ItineraryValidation.updateItem),
-  ItineraryController.updateItem
-);
-
-// Delete item
-router.delete(
-  "/:id",
-  auth("USER", "ADMIN"),
-  validateRequest(ItineraryValidation.deleteItem),
-  ItineraryController.deleteItem
-);
-
-// Bulk upsert (for AI Planner)
+// Bulk upsert (for AI Planner) - Specific route, must be before dynamic routes
 router.post(
   "/bulk",
   auth("USER", "ADMIN"),
@@ -54,7 +38,7 @@ router.post(
   ItineraryController.bulkUpsert
 );
 
-// Reorder items
+// Reorder items - Specific route, MUST be before /:id route
 router.patch(
   "/reorder",
   auth("USER", "ADMIN"),
@@ -62,5 +46,20 @@ router.patch(
   ItineraryController.reorderItems
 );
 
-export const ItineraryRoutes = router;
+// Update item - Dynamic route, must be AFTER specific routes
+router.patch(
+  "/:id",
+  auth("USER", "ADMIN"),
+  validateRequest(ItineraryValidation.updateItem),
+  ItineraryController.updateItem
+);
 
+// Delete item - Dynamic route
+router.delete(
+  "/:id",
+  auth("USER", "ADMIN"),
+  validateRequest(ItineraryValidation.deleteItem),
+  ItineraryController.deleteItem
+);
+
+export const ItineraryRoutes = router;

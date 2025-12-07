@@ -1,112 +1,67 @@
 import { z } from "zod";
 
-const stringRequired = (message: string) => z.string({ error: () => message });
-
-const baseBody = {
-  title: stringRequired("Title is required.")
-    .min(3, { message: "Title must be at least 3 characters long." })
-    .max(200, { message: "Title cannot exceed 200 characters." }),
-  destination: stringRequired("Destination is required.")
-    .min(2, { message: "Destination must be at least 2 characters long." })
-    .max(200, { message: "Destination cannot exceed 200 characters." }),
-  origin: stringRequired("Origin must be a string.")
-    .max(200, { message: "Origin cannot exceed 200 characters." })
-    .optional(),
-  startDate: stringRequired("Start date is required."),
-  endDate: stringRequired("End date is required."),
-  budgetMin: z
-    .number()
-    .nonnegative({ message: "Budget min must be >= 0." })
-    .optional(),
-  budgetMax: z
-    .number()
-    .nonnegative({ message: "Budget max must be >= 0." })
-    .optional(),
-  travelType: z.enum(
-    ["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"] as const,
-    {
-      error: () => "Invalid travel type.",
-    }
-  ),
-  visibility: z
-    .enum(["PUBLIC", "PRIVATE", "UNLISTED"] as const, {
-      error: () => "Invalid visibility.",
-    })
-    .optional(),
-  description: stringRequired("Description must be a string.")
-    .max(2000, { message: "Description cannot exceed 2000 characters." })
-    .optional(),
-  coverPhoto: stringRequired("Cover photo must be a string.")
-    .pipe(z.url({ error: () => "Cover photo must be a valid URL." }))
-    .optional(),
-};
-
 const createTravelPlanSchema = z.object({
-  body: z
-    .object(baseBody)
-    .refine(
-      (data) => {
-        const start = new Date(data.startDate);
-        const end = new Date(data.endDate);
-        return !isNaN(start.getTime()) && !isNaN(end.getTime()) && end >= start;
-      },
-      {
-        message: "endDate must be greater than or equal to startDate.",
-        path: ["endDate"],
-      }
-    )
-    .refine(
-      (data) =>
-        data.budgetMin === undefined ||
-        data.budgetMax === undefined ||
-        data.budgetMax >= data.budgetMin,
-      {
-        message: "budgetMax must be greater than or equal to budgetMin.",
-        path: ["budgetMax"],
-      }
-    ),
+  body: z.object({
+    title: z.string().min(1, { message: "Title is required." }),
+    destination: z.string().min(1, { message: "Destination is required." }),
+    origin: z.string().optional(),
+    startDate: z
+      .string()
+      .min(1, { message: "StartDate is required." })
+      .refine(
+        (date) => {
+          const startDate = new Date(date);
+          const now = new Date();
+          return !isNaN(startDate.getTime()) && startDate > now;
+        },
+        {
+          message: "Start date must be a future date. Past dates are not allowed.",
+        }
+      ),
+    endDate: z.string().min(1, { message: "EndDate is required." }),
+    travelType: z.enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"]),
+    budgetMin: z.number().optional(),
+    budgetMax: z.number().optional(),
+    visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
+    description: z.string().optional(),
+    coverPhoto: z.string().optional(),
+  }),
 });
 
 const updateTravelPlanSchema = z.object({
-  params: z.object({
-    id: stringRequired("Plan id is required."),
-  }),
-  body: z
-    .object({
-      ...Object.fromEntries(
-        Object.entries(baseBody).map(([key, value]) => [
-          key,
-          (value as z.ZodTypeAny).optional(),
-        ])
+  body: z.object({
+    title: z.string().optional(),
+    destination: z.string().optional(),
+    origin: z.string().optional(),
+    startDate: z
+      .string()
+      .optional()
+      .refine(
+        (date) => {
+          if (!date) return true; // Optional field, skip validation if not provided
+          const startDate = new Date(date);
+          const now = new Date();
+          return !isNaN(startDate.getTime()) && startDate > now;
+        },
+        {
+          message: "Start date must be a future date. Past dates are not allowed.",
+        }
       ),
-    })
-    .refine(
-      (data) => {
-        if (!data.startDate || !data.endDate) return true;
-        const start = new Date(data.startDate as string);
-        const end = new Date(data.endDate as string);
-        return !isNaN(start.getTime()) && !isNaN(end.getTime()) && end >= start;
-      },
-      {
-        message: "endDate must be greater than or equal to startDate.",
-        path: ["endDate"],
-      }
-    )
-    .refine(
-      (data) =>
-        data.budgetMin === undefined ||
-        data.budgetMax === undefined ||
-        (data.budgetMax as number) >= (data.budgetMin as number),
-      {
-        message: "budgetMax must be greater than or equal to budgetMin.",
-        path: ["budgetMax"],
-      }
-    ),
+    endDate: z.string().optional(),
+    travelType: z
+      .enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"])
+      .optional(),
+    budgetMin: z.number().optional(),
+    budgetMax: z.number().optional(),
+    visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
+    description: z.string().optional(),
+    coverPhoto: z.string().optional(),
+  }),
 });
 
 const getSingleTravelPlanSchema = z.object({
   params: z.object({
-    id: stringRequired("Plan id is required."),
+    id: z.string().min(1, { message: "Plan id is required." }),
   }),
 });
 

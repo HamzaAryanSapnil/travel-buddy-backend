@@ -172,9 +172,17 @@ const createMeetup = async (
     );
   }
 
+  // Check if plan has ended
+  const now = new Date();
+  if (plan.endDate < now) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "This travel plan has ended. No meetup can be scheduled now for this plan."
+    );
+  }
+
   // Validate scheduledAt is in the future
   const scheduledAt = new Date(payload.scheduledAt);
-  const now = new Date();
   if (isNaN(scheduledAt.getTime()) || scheduledAt <= now) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
