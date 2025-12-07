@@ -394,6 +394,58 @@ travel-buddy-frontend/
 
 ---
 
+#### API Integration
+
+**Endpoint:** `GET /api/v1/travel-plans`
+
+**Authentication:** Required (all users must be authenticated to view plans)
+
+**Query Parameters:**
+- `visibility`: "PUBLIC" | "PRIVATE" | "UNLISTED" (optional, filter by visibility)
+  - Use `visibility=PUBLIC` to show only public plans
+- `travelType`: "SOLO" | "COUPLE" | "FAMILY" | "FRIENDS" | "GROUP" (optional)
+- `searchTerm`: Search in title, destination, description (optional)
+- `sortBy`: "createdAt" | "startDate" | "budgetMin" (optional, default: "createdAt")
+- `sortOrder`: "asc" | "desc" (optional, default: "desc")
+- `page`: Page number (optional, default: 1)
+- `limit`: Items per page (optional, default: 10)
+
+**Note:** 
+- All users (authenticated) can view PUBLIC plans
+- Users can only view their own PRIVATE/UNLISTED plans
+- For public browsing, set `visibility=PUBLIC` in query params
+- Backend automatically filters based on user permissions
+
+**Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Travel plans retrieved successfully.",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 50
+  },
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Plan Title",
+      "destination": "Location",
+      "startDate": "2025-09-15T00:00:00.000Z",
+      "endDate": "2025-09-21T00:00:00.000Z",
+      "travelType": "FRIENDS",
+      "budgetMin": 5000,
+      "budgetMax": 12000,
+      "visibility": "PUBLIC",
+      "coverPhoto": "url",
+      "description": "Description text"
+    }
+  ]
+}
+```
+
+---
+
 #### Filters Section
 
 **Search Bar:**
@@ -401,12 +453,18 @@ travel-buddy-frontend/
 - **Placeholder:** "Search plans by destination, title..."
 - **Icon:** Search icon
 - **Functionality:** Real-time search as user types
+- **API Parameter:** `searchTerm`
 
 **Filter Dropdowns:**
 
 - **Travel Type:** All, Solo, Couple, Family, Friends, Group
+  - **API Parameter:** `travelType` (values: "SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP")
 - **Visibility:** All, Public (Private only shown if user is logged in)
+  - **API Parameter:** `visibility` (values: "PUBLIC", "PRIVATE", "UNLISTED")
+  - **Note:** Unauthenticated users should only see PUBLIC plans
 - **Sort By:** Newest, Oldest, Budget (Low to High), Budget (High to Low)
+  - **API Parameter:** `sortBy` (values: "createdAt", "startDate", "budgetMin")
+  - **API Parameter:** `sortOrder` (values: "asc", "desc")
 
 **Clear Filters Button:**
 
@@ -495,6 +553,62 @@ travel-buddy-frontend/
 
 ### 3.3 Plan Details Page (`/plans/:id`)
 
+#### API Integration
+
+**Endpoint:** `GET /api/v1/travel-plans/:id`
+
+**Authentication:** Required
+
+**Note:**
+- PUBLIC plans: Accessible to all authenticated users
+- PRIVATE/UNLISTED plans: Only accessible to plan members (owner, admins, editors, viewers)
+- Returns 404 if plan doesn't exist or user doesn't have access
+
+**Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Travel plan retrieved successfully.",
+  "data": {
+    "id": "uuid",
+    "title": "Plan Title",
+    "destination": "Location",
+    "origin": "Origin Location",
+    "startDate": "2025-09-15T00:00:00.000Z",
+    "endDate": "2025-09-21T00:00:00.000Z",
+    "travelType": "FRIENDS",
+    "budgetMin": 5000,
+    "budgetMax": 12000,
+    "visibility": "PUBLIC",
+    "coverPhoto": "url",
+    "description": "Description text",
+    "ownerId": "uuid",
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Itinerary Preview API:**
+- **Endpoint:** `GET /api/v1/itinerary/:planId`
+- **Authentication:** Required (but accessible for PUBLIC plans to all authenticated users)
+- **Query Parameters:** `dayIndex` (optional, filter by day), `page` (optional), `limit` (optional)
+- **Note:** Returns itinerary items for the plan. Accessible if user can view the plan.
+
+**Media Gallery Preview API:**
+- **Endpoint:** `GET /api/v1/media?planId=:planId`
+- **Authentication:** Required
+- **Query Parameters:** `type` (optional: "photo" | "video"), `page` (optional), `limit` (optional)
+- **Note:** Returns media files associated with the plan. Accessible if user can view the plan.
+
+**Reviews API:**
+- **Endpoint:** `GET /api/v1/reviews?planId=:planId`
+- **Authentication:** Required
+- **Query Parameters:** `rating` (optional, 1-5), `source` (optional: "USER_TO_TRIP"), `page` (optional), `limit` (optional), `sortBy` (optional), `sortOrder` (optional)
+- **Note:** Returns reviews for the travel plan (source: "USER_TO_TRIP")
+
+---
+
 #### Public Sections (Visible to Everyone)
 
 **Plan Header:**
@@ -513,6 +627,7 @@ travel-buddy-frontend/
 - **Section Title:** "Itinerary Preview"
 - **Content:** First 3-5 itinerary items only
 - **Display:** Day numbers, titles, times (if available)
+- **API:** Fetch from `GET /api/v1/itinerary/:planId` with `limit=5`
 - **Button:** "View Full Itinerary" (requires login, redirects to login if not authenticated)
 
 **Media Gallery Preview:**
@@ -520,6 +635,7 @@ travel-buddy-frontend/
 - **Section Title:** "Trip Photos"
 - **Content:** First 6-9 images in grid
 - **Layout:** 3-column grid
+- **API:** Fetch from `GET /api/v1/media?planId=:planId&type=photo&limit=9`
 - **Button:** "View All Photos" (requires login)
 
 **Reviews Section:**
@@ -755,6 +871,74 @@ travel-buddy-frontend/
 
 ---
 
+#### API Integration
+
+**Endpoint:** `POST /api/v1/auth/login`
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "Password123!"
+}
+```
+
+**Request Headers:**
+- `Content-Type: application/json`
+
+**Response:**
+- **Status:** 200 OK
+- **Cookies Set:** 
+  - `accessToken` (httpOnly, secure)
+  - `refreshToken` (httpOnly, secure)
+- **Response Body:**
+```json
+{
+  "success": true,
+  "message": "User logged in successfully.",
+  "data": {
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "fullName": "John Doe",
+      "role": "USER",
+      "status": "ACTIVE",
+      "isVerified": true,
+      "profileImage": "url"
+    },
+    "accessToken": "jwt-token",
+    "refreshToken": "jwt-token"
+  }
+}
+```
+
+**Important Notes:**
+- Tokens are automatically set in httpOnly cookies by the backend
+- Frontend should NOT manually store tokens in localStorage/sessionStorage
+- All subsequent API requests will automatically include cookies
+- Ensure `credentials: 'include'` is set in fetch/axios requests
+- For axios: `axios.defaults.withCredentials = true`
+
+**Error Response Format:**
+```json
+{
+  "success": false,
+  "message": "Validation Error",
+  "errorMessages": [
+    {
+      "path": "email",
+      "message": "Email is required."
+    },
+    {
+      "path": "password",
+      "message": "Password is required."
+    }
+  ]
+}
+```
+
+---
+
 #### Login Form
 
 **Title:** "Welcome Back"
@@ -769,7 +953,8 @@ travel-buddy-frontend/
 - **Label:** "Email Address"
 - **Placeholder:** "Enter your email"
 - **Validation:** Required, valid email format
-- **Error:** "Please enter a valid email address"
+- **Error:** Display from `errorMessages` array (path: "email")
+- **Backend Validation:** Email format validation
 
 **Password** (required):
 
@@ -778,13 +963,15 @@ travel-buddy-frontend/
 - **Placeholder:** "Enter your password"
 - **Show/Hide Toggle:** Eye icon to toggle visibility
 - **Validation:** Required
-- **Error:** "Password is required"
+- **Error:** Display from `errorMessages` array (path: "password")
+- **Backend Validation:** Password required
 
 **Remember Me** (optional):
 
 - **Type:** checkbox
 - **Label:** "Remember me for 30 days"
 - **Default:** Unchecked
+- **Note:** This is a UI-only feature. Token expiration is handled by backend cookies.
 
 **Forgot Password Link:**
 
@@ -796,7 +983,11 @@ travel-buddy-frontend/
 
 - **Text:** "Sign In"
 - **Loading State:** Show spinner, disable button during submission
-- **Success:** Redirect to `/dashboard` or previous page
+- **API Call:** `POST /api/v1/auth/login` with `credentials: 'include'`
+- **Success:** 
+  - Tokens are automatically stored in cookies
+  - Redirect to `/dashboard` or previous page (if stored)
+  - Optionally fetch user profile using `GET /api/v1/auth/me`
 - **Error:** Display error message below form
 
 **Register Link:**
@@ -810,18 +1001,35 @@ travel-buddy-frontend/
 
 #### Error Handling
 
+**Error Response Structure:**
+- Check `success: false` in response
+- Display `message` as main error
+- Display individual field errors from `errorMessages` array
+
 **Common Errors:**
 
-- "Invalid email or password"
-- "Account suspended. Please contact support."
-- "Too many login attempts. Please try again later."
-- Network errors: "Connection error. Please try again."
+- **Validation Errors:**
+  - "Email is required."
+  - "Password is required."
+  - "Please enter a valid email address."
+  - Display field-specific errors from `errorMessages` array
+
+- **Authentication Errors:**
+  - "Invalid email or password" (401)
+  - "Account suspended. Please contact support." (403)
+  - "Too many login attempts. Please try again later." (429)
+
+- **Network Errors:**
+  - "Connection error. Please try again."
+  - "Network request failed."
 
 **Display:**
 
-- Error banner at top of form
+- Error banner at top of form for general errors
+- Field-specific errors below each input field
 - Red text, clear message
 - Auto-dismiss after 5 seconds (optional)
+- Format: Show `message` as main error, then individual `errorMessages` for each field
 
 ---
 
@@ -833,6 +1041,75 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Endpoint:** `POST /api/v1/auth/register`
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "Password123!",
+  "fullName": "John Doe"
+}
+```
+
+**Request Headers:**
+- `Content-Type: application/json`
+
+**Response:**
+- **Status:** 201 Created
+- **Cookies Set:** 
+  - `accessToken` (httpOnly, secure)
+  - `refreshToken` (httpOnly, secure)
+- **Response Body:**
+```json
+{
+  "success": true,
+  "message": "User registered successfully.",
+  "data": {
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "fullName": "John Doe",
+      "role": "USER",
+      "status": "ACTIVE",
+      "isVerified": false,
+      "profileImage": null
+    },
+    "accessToken": "jwt-token",
+    "refreshToken": "jwt-token"
+  }
+}
+```
+
+**Important Notes:**
+- Tokens are automatically set in httpOnly cookies by the backend (same as login)
+- User is automatically logged in after registration
+- Frontend should NOT manually store tokens
+- Ensure `credentials: 'include'` is set in fetch/axios requests
+- For axios: `axios.defaults.withCredentials = true`
+
+**Error Response Format:**
+```json
+{
+  "success": false,
+  "message": "Validation Error",
+  "errorMessages": [
+    {
+      "path": "email",
+      "message": "Email is required!"
+    },
+    {
+      "path": "password",
+      "message": "Password must be at least 8 characters long."
+    }
+  ]
+}
+```
+
+---
+
 #### Registration Form
 
 **Title:** "Create Your Account"
@@ -841,13 +1118,19 @@ Same as login page (split or centered)
 
 **Form Fields:**
 
-**Full Name** (optional but recommended):
+**Full Name** (optional):
 
 - **Type:** text
 - **Label:** "Full Name"
 - **Placeholder:** "Enter your full name"
-- **Validation:** Min 2 characters, max 100 characters
-- **Error:** "Full name must be between 2 and 100 characters"
+- **Validation:** 
+  - Min 2 characters, max 100 characters (if provided)
+  - Optional field (can be empty)
+- **Error:** Display from `errorMessages` array (path: "fullName")
+  - "Full name is required!" (if backend requires it)
+  - "Full name must be at least 2 characters long."
+  - "Full name cannot exceed 100 characters."
+- **Backend Validation:** Optional, but if provided: min 2, max 100 chars
 
 **Email** (required):
 
@@ -855,8 +1138,12 @@ Same as login page (split or centered)
 - **Label:** "Email Address"
 - **Placeholder:** "Enter your email"
 - **Validation:** Required, valid email format
-- **Error:** "Please enter a valid email address"
-- **Duplicate Check:** "This email is already registered" (on blur or submit)
+- **Error:** Display from `errorMessages` array (path: "email")
+  - "Email is required!"
+  - "Invalid email address format."
+  - "This email is already registered" (409 Conflict - duplicate email)
+- **Backend Validation:** Required, valid email format
+- **Duplicate Check:** Backend returns 409 if email already exists
 
 **Password** (required):
 
@@ -864,37 +1151,51 @@ Same as login page (split or centered)
 - **Label:** "Password"
 - **Placeholder:** "Create a password"
 - **Show/Hide Toggle:** Eye icon
-- **Password Strength Indicator:** Visual indicator (weak/medium/strong)
-- **Validation Rules** (display as user types):
+- **Password Strength Indicator:** Visual indicator (weak/medium/strong) - recommended for UX
+- **Validation Rules** (display as user types, match backend requirements):
   - ✓ Minimum 8 characters
-  - ✓ At least 1 uppercase letter
-  - ✓ At least 1 number
+  - ✓ At least 1 uppercase letter (A-Z)
+  - ✓ At least 1 number (0-9)
   - ✓ At least 1 special character (!@#$%^&\*)
-- **Error:** "Password must meet all requirements"
+- **Error:** Display from `errorMessages` array (path: "password")
+  - "Password is required!"
+  - "Password must be at least 8 characters long."
+  - "Password must contain at least 1 uppercase letter."
+  - "Password must contain at least 1 special character."
+  - "Password must contain at least 1 number."
+- **Backend Validation:** Required, min 8 chars, must have uppercase, special char, and number
 
-**Confirm Password** (required):
+**Confirm Password** (required - frontend only):
 
 - **Type:** password
 - **Label:** "Confirm Password"
 - **Placeholder:** "Confirm your password"
 - **Show/Hide Toggle:** Eye icon
-- **Validation:** Must match password field
-- **Error:** "Passwords do not match"
+- **Validation:** Must match password field (client-side validation only)
+- **Error:** "Passwords do not match" (frontend validation, not sent to backend)
+- **Note:** This field is NOT sent to backend. It's for UX only to prevent typos.
 
-**Terms & Conditions** (required):
+**Terms & Conditions** (required - frontend only):
 
 - **Type:** checkbox
 - **Label:** "I agree to the Terms of Service and Privacy Policy"
 - **Links:** Terms and Privacy Policy (open in new tab)
-- **Validation:** Required
-- **Error:** "You must agree to the terms to continue"
+- **Validation:** Required (client-side only, prevents form submission)
+- **Error:** "You must agree to the terms to continue" (frontend validation)
+- **Note:** This is not sent to backend. It's a frontend requirement for legal compliance.
 
 **Submit Button:**
 
 - **Text:** "Create Account"
-- **Loading State:** Show spinner, disable button
-- **Success:** Redirect to `/dashboard` or email verification page
-- **Error:** Display error message
+- **Loading State:** Show spinner, disable button during submission
+- **API Call:** `POST /api/v1/auth/register` with `credentials: 'include'`
+- **Success:** 
+  - Tokens are automatically stored in cookies
+  - User is automatically logged in
+  - Redirect to `/dashboard`
+  - Optionally fetch user profile using `GET /api/v1/auth/me`
+  - Show success message: "Account created successfully!"
+- **Error:** Display error message below form
 
 **Login Link:**
 
@@ -905,13 +1206,54 @@ Same as login page (split or centered)
 
 ---
 
+#### Error Handling
+
+**Error Response Structure:**
+- Check `success: false` in response
+- Display `message` as main error
+- Display individual field errors from `errorMessages` array
+
+**Common Errors:**
+
+- **Validation Errors:**
+  - "Email is required!"
+  - "Invalid email address format."
+  - "Password is required!"
+  - "Password must be at least 8 characters long."
+  - "Password must contain at least 1 uppercase letter."
+  - "Password must contain at least 1 special character."
+  - "Password must contain at least 1 number."
+  - "Full name must be at least 2 characters long." (if provided)
+  - "Full name cannot exceed 100 characters." (if provided)
+  - Display field-specific errors from `errorMessages` array
+
+- **Duplicate Email Error:**
+  - "This email is already registered" (409 Conflict)
+  - Display as field error for email field
+
+- **Network Errors:**
+  - "Connection error. Please try again."
+  - "Network request failed."
+
+**Display:**
+
+- Error banner at top of form for general errors
+- Field-specific errors below each input field
+- Red text, clear message
+- Auto-dismiss after 5 seconds (optional)
+- Format: Show `message` as main error, then individual `errorMessages` for each field
+
+---
+
 #### Success Flow
 
 **After Registration:**
 
 - Show success message: "Account created successfully!"
-- Auto-login or redirect to login page
-- Welcome email (handled by backend)
+- User is automatically logged in (tokens in cookies)
+- Redirect to `/dashboard`
+- Welcome email sent by backend (no frontend action needed)
+- Optionally show onboarding tour or welcome modal
 
 ---
 
@@ -1156,22 +1498,76 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Endpoint:** `GET /api/v1/travel-plans`
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `type`: Filter by type - "future" | "past" (optional)
+- `visibility`: "PUBLIC" | "PRIVATE" | "UNLISTED" (optional)
+- `travelType`: "SOLO" | "COUPLE" | "FAMILY" | "FRIENDS" | "GROUP" (optional)
+- `searchTerm`: Search in title, destination, description (optional)
+- `sortBy`: "createdAt" | "startDate" | "budgetMin" (optional, default: "createdAt")
+- `sortOrder`: "asc" | "desc" (optional, default: "desc")
+- `page`: Page number (optional, default: 1)
+- `limit`: Items per page (optional, default: 10)
+
+**Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Travel plans retrieved successfully.",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 25
+  },
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Plan Title",
+      "destination": "Location",
+      "origin": "Origin Location",
+      "startDate": "2025-09-15T00:00:00.000Z",
+      "endDate": "2025-09-21T00:00:00.000Z",
+      "travelType": "FRIENDS",
+      "budgetMin": 5000,
+      "budgetMax": 12000,
+      "visibility": "PUBLIC",
+      "coverPhoto": "url",
+      "description": "Description text",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
 #### Filters
 
 **Type Filter:**
 
 - Radio buttons or tabs: All / Future / Past
 - Default: All
+- **API Parameter:** `type` (values: "future" | "past")
 
 **Search:**
 
 - Search input: "Search by title or destination..."
-- Real-time filtering
+- Real-time filtering (debounced)
+- **API Parameter:** `searchTerm`
 
 **Sort:**
 
-- Dropdown: Newest / Oldest / Alphabetical
+- Dropdown: Newest / Oldest / Alphabetical / Budget (Low to High) / Budget (High to Low)
 - Default: Newest
+- **API Parameters:** 
+  - `sortBy`: "createdAt" | "startDate" | "budgetMin"
+  - `sortOrder`: "asc" | "desc"
 
 ---
 
@@ -1262,9 +1658,11 @@ Same as login page (split or centered)
 - **Type:** date picker
 - **Label:** "Start Date \*"
 - **Placeholder:** "Select start date"
-- **Validation:** Must be today or future date
-- **Error:** "Start date must be today or in the future"
-- **Feature:** Calendar popup, disable past dates
+- **Validation:** Must be a future date (not today, must be after today)
+- **Error:** "Start date must be a future date. Past dates are not allowed."
+- **Feature:** Calendar popup, disable past dates and today
+- **Backend Validation:** Backend also validates that startDate is in the future
+- **Format:** Date only (YYYY-MM-DD), no time component
 
 **5. End Date** (required):
 
@@ -1280,14 +1678,15 @@ Same as login page (split or centered)
 - **Type:** radio buttons or select dropdown
 - **Label:** "Travel Type \*"
 - **Options:**
-  - **Solo:** "Traveling alone"
-  - **Couple:** "Traveling with a partner"
-  - **Family:** "Family trip"
-  - **Friends:** "Trip with friends"
-  - **Group:** "Large group trip"
-- **Default:** Friends
-- **Validation:** Required
-- **Error:** "Please select a travel type"
+  - **SOLO:** "Traveling alone"
+  - **COUPLE:** "Traveling with a partner"
+  - **FAMILY:** "Family trip"
+  - **FRIENDS:** "Trip with friends"
+  - **GROUP:** "Large group trip"
+- **Default:** FRIENDS
+- **Validation:** Required, must be one of: SOLO, COUPLE, FAMILY, FRIENDS, GROUP
+- **Error:** "Invalid travel type. Must be SOLO, COUPLE, FAMILY, FRIENDS, or GROUP."
+- **Backend Values:** Use exact enum values (SOLO, COUPLE, FAMILY, FRIENDS, GROUP) - case-sensitive
 - **Styling:** Icons for each option (optional)
 
 **7. Budget Min** (optional):
@@ -1364,13 +1763,73 @@ Same as login page (split or centered)
 - **Text:** "Create Plan"
 - **Action:** Submit form
 - **Loading State:** Show spinner, disable button
-- **Success:** Redirect to plan details page
-- **Error:** Display error message
+- **API Call:** `POST /api/v1/travel-plans` with `credentials: 'include'`
+- **Request Body:**
+```json
+{
+  "title": "Spring Trip to Cox's Bazar",
+  "destination": "Cox's Bazar, Bangladesh",
+  "origin": "Dhaka, Bangladesh",
+  "startDate": "2025-09-15",
+  "endDate": "2025-09-21",
+  "travelType": "FRIENDS",
+  "budgetMin": 5000,
+  "budgetMax": 12000,
+  "visibility": "PUBLIC",
+  "description": "An awesome week-long trip!",
+  "coverPhoto": "https://my-cloudinary-url/trip-photo.jpg"
+}
+```
+- **Validation Notes:**
+  - `startDate` must be future date (YYYY-MM-DD format)
+  - `endDate` must be >= `startDate`
+  - `travelType` must be: SOLO, COUPLE, FAMILY, FRIENDS, GROUP
+  - `visibility` must be: PUBLIC, PRIVATE, UNLISTED
+  - All fields required except `origin` and `coverPhoto`
+- **Success:** 
+  - Show success toast: "Travel plan created successfully"
+  - Redirect to `/dashboard/travel-plans/:id` (plan details page)
+- **Error:** Display error message from `errorMessages` array
+  - Field-specific errors: "Start date must be a future date. Past dates are not allowed."
+  - "endDate must be greater than or equal to startDate."
+  - "Invalid travel type. Must be SOLO, COUPLE, FAMILY, FRIENDS, GROUP."
 - **Styling:** Primary button
 
 ---
 
 ### 5.5 Travel Plan Details (`/dashboard/travel-plans/:id`)
+
+#### API Integration
+
+**Get Plan Details:**
+- **Endpoint:** `GET /api/v1/travel-plans/:id`
+- **Authentication:** Required
+- **Response:** Returns full plan details with owner, members count, itinerary count, etc.
+
+**Update Plan:**
+- **Endpoint:** `PATCH /api/v1/travel-plans/:id`
+- **Authentication:** Required (owner or admin only)
+- **Request Body:** All fields optional, only send what you want to update
+```json
+{
+  "title": "Updated Plan Title",
+  "destination": "Bandarban, Bangladesh",
+  "origin": "Dhaka",
+  "startDate": "2025-09-20",
+  "endDate": "2025-09-26"
+}
+```
+- **Validation Notes:**
+  - If updating `startDate`, it must be a future date
+  - `endDate` must be >= `startDate`
+  - `planId` and `splitType` cannot be updated (if mentioned elsewhere)
+
+**Delete Plan:**
+- **Endpoint:** `DELETE /api/v1/travel-plans/:id`
+- **Authentication:** Required (owner or admin only)
+- **Confirmation:** Show confirmation modal before deletion
+
+---
 
 #### Page Header
 
@@ -1379,7 +1838,7 @@ Same as login page (split or centered)
 **Actions:**
 
 - Edit → `/dashboard/travel-plans/:id/edit`
-- Delete → Confirmation modal
+- Delete → Confirmation modal → `DELETE /api/v1/travel-plans/:id`
 - Share → Share modal
 - Invite Members → Invite modal
 
@@ -1395,39 +1854,76 @@ Same as login page (split or centered)
    - Quick stats (expenses, meetups, media count)
 
 2. **Itinerary Tab**
+   - **API:** `GET /api/v1/itinerary/:planId` to fetch itinerary items
    - Link to full itinerary page or embedded view
-   - Add new item button
-   - Day-by-day breakdown
+   - Add new item button → Opens create form
+   - **API:** `POST /api/v1/itinerary` to create item
+   - Day-by-day breakdown (grouped by `dayIndex`)
+   - Edit/Delete actions for each item
+   - **API:** `PATCH /api/v1/itinerary/:itemId` to update
+   - **API:** `DELETE /api/v1/itinerary/:itemId` to delete
 
 3. **Members Tab**
    - Member list with avatars, names, roles
-   - Invite member button
+   - **API:** `GET /api/v1/trip-members/:planId` to fetch members
+   - Invite member button → Opens invite modal
+   - **API:** `POST /api/v1/trip-members/:planId/add` with `{ email, role }`
    - Update role dropdown (for owners/admins)
+   - **API:** `PATCH /api/v1/trip-members/:planId/update-role` with `{ userId, role }`
    - Remove member action
+   - **API:** `DELETE /api/v1/trip-members/:memberId` (uses TripMember ID, not userId)
 
 4. **Expenses Tab**
+   - **API:** `GET /api/v1/expenses?planId=:planId` to fetch expenses
    - Link to expenses page or embedded list
-   - Expense summary card
-   - Add expense button
+   - **API:** `GET /api/v1/expenses/summary?planId=:planId` for summary
+   - Expense summary card (total, breakdown by category, settlement calculations)
+   - Add expense button → Opens create form
+   - **API:** `POST /api/v1/expenses` to create expense
+   - Edit/Delete/Settle actions
+   - **API:** `PATCH /api/v1/expenses/:expenseId` to update
+   - **API:** `DELETE /api/v1/expenses/:expenseId` to delete
+   - **API:** `PATCH /api/v1/expenses/:expenseId/settle/:participantId` to settle
 
 5. **Meetups Tab**
+   - **API:** `GET /api/v1/meetups?planId=:planId` to fetch meetups
    - List of meetups for this plan
-   - Create meetup button
+   - Create meetup button → Opens create form
+   - **API:** `POST /api/v1/meetups` with `{ planId, scheduledAt, location?, maxParticipants? }`
    - RSVP status for each
+   - **API:** `POST /api/v1/meetups/:meetupId/rsvp` to RSVP
+   - Edit/Delete/Update Status actions (organizer only)
 
 6. **Media Tab**
+   - **API:** `GET /api/v1/media?planId=:planId` to fetch media
    - Gallery view of all media
-   - Upload media button
+   - Upload media button → Opens upload form
+   - **API:** `POST /api/v1/media` with `multipart/form-data` (files array, planId, type?)
    - Lightbox for viewing images
+   - **API:** `GET /api/v1/media/:mediaId` to fetch single media details
+   - Delete action (creator/admin only)
+   - **API:** `DELETE /api/v1/media/:mediaId` to delete
 
 7. **Chat Tab**
+   - **API:** `GET /api/v1/chat/threads?planId=:planId` to fetch or create thread
+   - **API:** If thread doesn't exist, create with `POST /api/v1/chat/threads` with `{ type: "PLAN", refId: planId }`
    - Embedded chat interface or link
-   - Message list
-   - Send message input
+   - **API:** `GET /api/v1/chat/threads/:threadId/messages?limit=30` to fetch messages
+   - Message list with cursor pagination
+   - **API:** `POST /api/v1/chat/threads/:threadId/messages` to send message
+   - Send message input with attachments support
+   - Edit/Delete message actions
+   - **API:** `PATCH /api/v1/chat/messages/:messageId` to edit
+   - **API:** `DELETE /api/v1/chat/messages/:messageId` to delete
 
 8. **Reviews Tab**
+   - **API:** `GET /api/v1/reviews?planId=:planId` to fetch reviews
    - Reviews for this plan
    - Create review button (if user hasn't reviewed)
+   - **API:** `POST /api/v1/reviews` with `{ rating, comment?, source: "USER_TO_TRIP", planId }`
+   - Edit/Delete actions for own reviews
+   - **API:** `PATCH /api/v1/reviews/:reviewId` to update
+   - **API:** `DELETE /api/v1/reviews/:reviewId` to delete
 
 **Tab Content:** Each tab shows relevant information and actions
 
@@ -1456,6 +1952,149 @@ Same as login page (split or centered)
 "Itinerary - [Plan Name]"
 
 **Breadcrumb:** Dashboard > Travel Plans > [Plan Name] > Itinerary
+
+---
+
+#### API Integration
+
+**Get Itinerary Items By Plan:**
+- **Endpoint:** `GET /api/v1/itinerary/:planId`
+- **Authentication:** Required for PRIVATE/UNLISTED plans, optional for PUBLIC plans
+- **Query Parameters:**
+  - `dayIndex`: Filter by day index (optional, number >= 1)
+  - `page`: Page number (optional)
+  - `limit`: Items per page (optional)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Itinerary items retrieved successfully.",
+  "data": [
+    {
+      "id": "itemId",
+      "planId": "planId",
+      "dayIndex": 1,
+      "title": "Visit Buddhist Temple",
+      "description": "Morning sightseeing",
+      "startAt": "2025-09-15T09:00:00.000Z",
+      "endAt": "2025-09-15T11:00:00.000Z",
+      "locationId": "locationId",
+      "order": 1,
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Get Single Itinerary Item:**
+- **Endpoint:** `GET /api/v1/itinerary/item/:itemId`
+- **Authentication:** Required for PRIVATE/UNLISTED plans, optional for PUBLIC plans
+- **Response:** Returns single itinerary item object
+
+**Create Itinerary Item:**
+- **Endpoint:** `POST /api/v1/itinerary`
+- **Authentication:** Required (plan member/admin only)
+- **Request Body:**
+```json
+{
+  "planId": "planId",
+  "dayIndex": 1,
+  "title": "Visit Buddhist Temple",
+  "description": "Morning sightseeing at temple",
+  "startAt": "2025-09-15T09:00:00.000Z",
+  "endAt": "2025-09-15T11:00:00.000Z",
+  "locationId": "locationId",
+  "order": 1
+}
+```
+- **Validation Notes:**
+  - `planId`: Required
+  - `dayIndex`: Required, number >= 1
+  - `title`: Required, 3-200 characters
+  - `description`: Optional, max 2000 characters
+  - `startAt`: Optional, ISO datetime string (e.g., "2025-09-15T09:00:00.000Z")
+  - `endAt`: Optional, ISO datetime string, must be >= startAt
+  - `locationId`: Optional, UUID
+  - `order`: Optional, number >= 0
+- **Date Validation:** startAt and endAt must be within the plan's date range (plan.startDate to plan.endDate)
+
+**Update Itinerary Item:**
+- **Endpoint:** `PATCH /api/v1/itinerary/:itemId`
+- **Authentication:** Required (plan member/admin only)
+- **Request Body:** All fields optional, only send what you want to update
+```json
+{
+  "dayIndex": 1,
+  "title": "Updated Title",
+  "description": "Updated description",
+  "startAt": "2025-09-15T14:00:00.000Z",
+  "endAt": "2025-09-15T18:00:00.000Z",
+  "locationId": "locationId",
+  "order": 2
+}
+```
+
+**Delete Itinerary Item:**
+- **Endpoint:** `DELETE /api/v1/itinerary/:itemId`
+- **Authentication:** Required (plan member/admin only)
+- **Success:** Returns success message
+
+**Bulk Upsert Itinerary:**
+- **Endpoint:** `POST /api/v1/itinerary/bulk`
+- **Authentication:** Required (plan member/admin only)
+- **Request Body:**
+```json
+{
+  "planId": "planId",
+  "replace": false,
+  "items": [
+    {
+      "dayIndex": 1,
+      "title": "Check-in at Hotel",
+      "description": "Arrival and room allocation.",
+      "startAt": "2025-09-15T12:00:00.000Z",
+      "endAt": "2025-09-15T13:00:00.000Z",
+      "locationId": "locationId",
+      "order": 1,
+      "id": "itemId"
+    }
+  ]
+}
+```
+- **Validation Notes:**
+  - `planId`: Required
+  - `replace`: Optional boolean (default: false). If true, replaces all existing items
+  - `items`: Required array with at least 1 item
+  - Each item: `dayIndex` (required), `title` (required, 3-200 chars), `id` (optional - if provided, updates existing item)
+- **Use Case:** For AI-generated itineraries or bulk imports
+
+**Reorder Itinerary Items:**
+- **Endpoint:** `PATCH /api/v1/itinerary/reorder`
+- **Authentication:** Required (plan member/admin only)
+- **Request Body:**
+```json
+{
+  "planId": "planId",
+  "updates": [
+    {
+      "id": "itemId1",
+      "dayIndex": 1,
+      "order": 2
+    },
+    {
+      "id": "itemId2",
+      "dayIndex": 1,
+      "order": 1
+    }
+  ]
+}
+```
+- **Validation Notes:**
+  - `planId`: Required
+  - `updates`: Required array with at least 1 item
+  - Each update: `id` (required, item ID), `dayIndex` (required, >= 1), `order` (required, >= 0)
+- **Use Case:** Drag & drop reordering
 
 ---
 
@@ -1514,8 +2153,9 @@ Same as login page (split or centered)
 - **Placeholder:** "Select day"
 - **Options:** Day 1, Day 2, Day 3, etc. (based on plan duration)
 - **Default:** Next available day
-- **Validation:** Required, must be within plan duration
+- **Validation:** Required, must be >= 1, must be within plan duration
 - **Error:** "Please select a valid day"
+- **Backend Field:** `dayIndex` (number, >= 1)
 
 **Title** (required):
 
@@ -1534,30 +2174,41 @@ Same as login page (split or centered)
 - **Character Counter:** "X / 1000 characters"
 - **Rows:** 3-4
 
-**Start Time** (optional):
+**Start Date & Time** (optional):
 
-- **Type:** time picker
-- **Label:** "Start Time"
-- **Placeholder:** "Select start time"
-- **Format:** 12-hour or 24-hour (user preference)
-- **Feature:** Time picker component
+- **Type:** datetime picker (date + time)
+- **Label:** "Start Date & Time"
+- **Placeholder:** "Select start date and time"
+- **Format:** ISO datetime string (e.g., "2025-09-15T09:00:00.000Z")
+- **Feature:** Combined date and time picker
+- **Validation:** Must be within plan's date range (plan.startDate to plan.endDate)
+- **Error:** "Start date must be within the plan's date range"
+- **Backend Field:** `startAt` (ISO datetime string)
+- **Note:** Frontend should combine date and time into ISO format before sending
 
-**End Time** (optional):
+**End Date & Time** (optional):
 
-- **Type:** time picker
-- **Label:** "End Time"
-- **Placeholder:** "Select end time"
-- **Validation:** Must be after start time (if both provided)
-- **Error:** "End time must be after start time"
-- **Format:** 12-hour or 24-hour
+- **Type:** datetime picker (date + time)
+- **Label:** "End Date & Time"
+- **Placeholder:** "Select end date and time"
+- **Format:** ISO datetime string (e.g., "2025-09-15T11:00:00.000Z")
+- **Validation:** Must be >= startAt (if both provided), must be within plan's date range
+- **Error:** "End date must be after start date" or "End date must be within the plan's date range"
+- **Backend Field:** `endAt` (ISO datetime string)
+- **Note:** Frontend should combine date and time into ISO format before sending
 
 **Location** (optional):
 
-- **Type:** text input with autocomplete
+- **Type:** Location selector (search + select or create)
 - **Label:** "Location"
-- **Placeholder:** "Location address"
-- **Feature:** Google Places autocomplete or similar
-- **Map Preview:** Show location on map (optional)
+- **Placeholder:** "Search or select location"
+- **Feature:** 
+  - Search existing locations or create new
+  - Google Places autocomplete integration (optional)
+  - Map preview (optional)
+- **Backend Field:** `locationId` (UUID, optional)
+- **Note:** Frontend should handle location creation/selection and send `locationId` (UUID) to backend, not location string
+- **Validation:** Must be valid UUID if provided
 
 **Order** (optional):
 
@@ -1571,7 +2222,21 @@ Same as login page (split or centered)
 
 - **Cancel Button:** Close form without saving
 - **Save Button:** Save item and close form
-- **Save & Add Another:** Save and open new form
+- **API Call (Create):** `POST /api/v1/itinerary` with `credentials: 'include'`
+- **API Call (Update):** `PATCH /api/v1/itinerary/:itemId` with `credentials: 'include'`
+- **Request Body:** Convert form data to API format:
+  - Combine date + time into ISO datetime for `startAt`/`endAt`
+  - Send `locationId` (UUID) not location string
+  - Send `dayIndex` (number) not "day"
+- **Success:** 
+  - Show success toast
+  - Refresh itinerary list using `GET /api/v1/itinerary/:planId`
+  - Close form
+- **Error:** Display error from `errorMessages` array
+  - "startAt for item '[title]' must be within the plan's date range."
+  - "endAt must be greater than or equal to startAt."
+  - "Title must be between 3 and 200 characters."
+- **Save & Add Another:** Save and open new form (same API call)
 
 **Styling:**
 
@@ -1585,20 +2250,69 @@ Same as login page (split or centered)
 
 **Bulk Add Items:**
 
-- **Button:** "Bulk Add Items"
+- **Button:** "Bulk Add Items" or "Bulk Upsert"
 - **Functionality:**
-  - Opens modal with textarea
-  - User can paste multiple items (one per line)
-  - Format: "Day 1 | 9:00 AM | Visit Museum | Description"
-  - Parse and create multiple items
-- **Use Case:** For AI-generated itineraries
+  - Opens modal with form
+  - User can add multiple items in a table/list format
+  - Or paste/import from AI-generated itinerary
+  - Each item: dayIndex, title, description, startAt, endAt, locationId, order
+- **API Call:** `POST /api/v1/itinerary/bulk` with `credentials: 'include'`
+- **Request Body:**
+```json
+{
+  "planId": "planId",
+  "replace": false,
+  "items": [
+    {
+      "dayIndex": 1,
+      "title": "Check-in at Hotel",
+      "description": "Arrival and room allocation.",
+      "startAt": "2025-09-15T12:00:00.000Z",
+      "endAt": "2025-09-15T13:00:00.000Z",
+      "locationId": "locationId",
+      "order": 1
+    }
+  ]
+}
+```
+- **Validation Notes:**
+  - `replace`: If true, replaces all existing items (use with caution)
+  - Each item must have `dayIndex` and `title`
+  - If item has `id`, it will update existing item (upsert)
+- **Success:** Show success toast, refresh itinerary list
+- **Error:** Display error from `errorMessages` array
+- **Use Case:** For AI-generated itineraries or bulk imports
 
 **Drag & Drop Reordering:**
 
 - **Feature:** Drag items within a day or between days
-- **Visual Feedback:** Show drop zones
+- **Visual Feedback:** Show drop zones, highlight drop target
 - **Save Order Button:** "Save Order" (appears after reordering)
-- **API Call:** PATCH `/api/v1/itinerary/reorder`
+- **API Call:** `PATCH /api/v1/itinerary/reorder` with `credentials: 'include'`
+- **Request Body:**
+```json
+{
+  "planId": "planId",
+  "updates": [
+    {
+      "id": "itemId1",
+      "dayIndex": 1,
+      "order": 2
+    },
+    {
+      "id": "itemId2",
+      "dayIndex": 1,
+      "order": 1
+    }
+  ]
+}
+```
+- **Validation Notes:**
+  - Each update must have: `id` (item ID), `dayIndex`, `order`
+  - Can update multiple items at once
+  - Can change `dayIndex` (move between days) and `order` (reorder within day)
+- **Success:** Show success toast, refresh itinerary list
+- **Error:** Display error from `errorMessages` array
 
 **Delete Multiple:**
 
@@ -1638,19 +2352,129 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Create Planning Session:**
+- **Endpoint:** `POST /api/v1/planner`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "planId": "planId"
+}
+```
+- **Validation Notes:**
+  - `planId`: Optional (if provided, links session to existing plan)
+  - If not provided, creates new session for new plan
+- **Response:** Returns created session with `sessionId`
+- **Use Case:** Start a new AI planning session
+
+**Add Step to Session:**
+- **Endpoint:** `POST /api/v1/planner/:sessionId/step`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "question": "What is your travel destination?",
+  "answer": "Cox's Bazar",
+  "uiStep": "destination"
+}
+```
+- **Validation Notes:**
+  - `question`: Required, the question asked
+  - `answer`: Required, user's answer
+  - `uiStep`: Optional, UI step identifier (e.g., "destination", "dates", "preferences")
+- **Response:** Returns updated session with new step added
+- **Use Case:** Add user responses step by step
+
+**Complete Planning Session:**
+- **Endpoint:** `POST /api/v1/planner/:sessionId/complete`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "finalOutput": {
+    "title": "Spring Trip to Cox's Bazar",
+    "destination": "Cox's Bazar, Bangladesh",
+    "origin": "Dhaka, Bangladesh",
+    "startDate": "2025-09-15",
+    "endDate": "2025-09-21",
+    "budgetMin": 5000,
+    "budgetMax": 12000,
+    "travelType": "FRIENDS",
+    "description": "An awesome week-long trip!",
+    "itinerary": [
+      {
+        "dayIndex": 1,
+        "items": [
+          {
+            "title": "Arrival and Check-in",
+            "description": "Check-in at hotel",
+            "startAt": "2025-09-15T12:00:00.000Z",
+            "endAt": "2025-09-15T14:00:00.000Z",
+            "location": "Hotel Sea Crown"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+- **Validation Notes:**
+  - `finalOutput`: Required object with travel plan details
+  - `title`, `destination`, `startDate`, `endDate`, `travelType`: Required
+  - `itinerary`: Optional array with day-by-day items
+  - Each itinerary item: `dayIndex`, `items` array with `title`, `description`, `startAt`, `endAt`, `location`
+- **Response:** Returns created travel plan (if planId was provided) or session completion status
+- **Use Case:** Finalize AI planning and create travel plan
+
+**Get Planning Session:**
+- **Endpoint:** `GET /api/v1/planner/:sessionId`
+- **Authentication:** Required
+- **Response:** Returns session with all steps and current state
+- **Use Case:** Resume or view existing session
+
+**Get My Planning Sessions:**
+- **Endpoint:** `GET /api/v1/planner`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+  - `sortBy`: Sort field (optional, default: "createdAt")
+  - `sortOrder`: "asc" or "desc" (optional, default: "desc")
+- **Response:** Returns paginated list of user's planning sessions
+- **Use Case:** List all user's AI planning sessions
+
+---
+
 #### Session List (If User Has Previous Sessions)
 
 **Section Title:** "Previous Sessions"
 
+**API Integration:**
+- **Endpoint:** `GET /api/v1/planner?page=1&limit=10&sortBy=createdAt&sortOrder=desc`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+  - `sortBy`: Sort field (optional, default: "createdAt")
+  - `sortOrder`: "asc" or "desc" (optional, default: "desc")
+- **Response:** Returns paginated list of user's planning sessions
+
 **Session Card** (each session):
 
 - **Status Badge:** In Progress / Completed
-- **Destination:** Session destination
-- **Created Date:** "Created on [date]"
+- **Destination:** Session destination (from session data)
+- **Created Date:** "Created on [date]" (from `createdAt`)
 - **Actions:**
   - Continue (if In Progress) → Resume session
+    - **API:** `GET /api/v1/planner/:sessionId` to fetch session
+    - Navigate to wizard with session data pre-filled
   - View (if Completed) → View generated plan
+    - **API:** `GET /api/v1/planner/:sessionId` to fetch session
+    - Navigate to travel plan if `planId` exists
   - Delete → Confirmation modal
+    - **Note:** Delete endpoint not available in current API
 
 **Styling:**
 
@@ -1870,8 +2694,16 @@ Same as login page (split or centered)
   - Show spinner
   - Progress message: "AI is creating your perfect itinerary..."
   - Disable button
-- **Success:** Display generated itinerary
-- **Error:** Display error message
+- **API Flow:**
+  1. **Create Session:** `POST /api/v1/planner` (with optional `planId`)
+  2. **Add Steps:** `POST /api/v1/planner/:sessionId/step` for each step
+     - Step 1: Destination, dates → `{ question: "...", answer: "...", uiStep: "destination" }`
+     - Step 2: Travel type, budget, interests → `{ question: "...", answer: "...", uiStep: "preferences" }`
+     - Step 3: Activities, requirements → `{ question: "...", answer: "...", uiStep: "activities" }`
+  3. **Complete Session:** `POST /api/v1/planner/:sessionId/complete` with `finalOutput`
+     - `finalOutput` contains travel plan details and optional itinerary
+- **Success:** Display generated itinerary or created travel plan
+- **Error:** Display error message from `errorMessages` array
 
 **Navigation:**
 
@@ -1913,17 +2745,21 @@ Same as login page (split or centered)
 **Actions:**
 
 - **"Use This Itinerary" Button:**
-  - Creates travel plan with generated itinerary
-  - Redirects to new travel plan page
+  - If session has `planId`: Updates existing plan
+  - If no `planId`: Creates new travel plan from `finalOutput`
+  - **API:** `POST /api/v1/planner/:sessionId/complete` with `finalOutput` object
+  - Redirects to travel plan page (`/dashboard/travel-plans/:planId`)
   - Success message: "Travel plan created successfully!"
 
 - **"Regenerate" Button:**
   - Returns to Step 1
   - Allows user to modify preferences
+  - **API:** Create new session or update existing session steps
 
 - **"Edit Manually" Button:**
   - Opens itinerary editor
   - Allows manual adjustments before creating plan
+  - **API:** After editing, call `POST /api/v1/planner/:sessionId/complete` with updated `finalOutput`
 
 **Styling:**
 
@@ -1974,6 +2810,140 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Get All Expenses For Plan:**
+- **Endpoint:** `GET /api/v1/expenses`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `planId`: Filter by plan ID (required for plan-specific view)
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+  - `sortBy`: Sort field (optional)
+  - `sortOrder`: "asc" or "desc" (optional, default: "desc")
+  - `searchTerm`: Search in description (optional)
+  - `category`: Filter by category - "FOOD", "TRANSPORT", "ACCOMMODATION", "ACTIVITY", "SHOPPING", "OTHER" (optional)
+  - `payerId`: Filter by payer ID (optional)
+  - `splitType`: Filter by split type - "EQUAL", "CUSTOM", "PERCENTAGE" (optional)
+  - `startDate`: Filter from date (optional, YYYY-MM-DD)
+  - `endDate`: Filter to date (optional, YYYY-MM-DD)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Expenses retrieved successfully.",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 50
+  },
+  "data": [
+    {
+      "id": "expenseId",
+      "planId": "planId",
+      "payerId": "userId",
+      "amount": 1200,
+      "currency": "BDT",
+      "category": "FOOD",
+      "expenseDate": "2025-09-21",
+      "splitType": "EQUAL",
+      "description": "Lunch at beachside restaurant.",
+      "locationId": "locationId",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "payer": { ... },
+      "plan": { ... },
+      "participants": [ ... ]
+    }
+  ]
+}
+```
+
+**Get Single Expense:**
+- **Endpoint:** `GET /api/v1/expenses/:expenseId`
+- **Authentication:** Required
+- **Response:** Returns expense with payer, plan, participants, location, and summary
+
+**Create Expense:**
+- **Endpoint:** `POST /api/v1/expenses`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "planId": "planId",
+  "payerId": "payerId",
+  "amount": 1200,
+  "currency": "BDT",
+  "category": "FOOD",
+  "expenseDate": "2025-09-21",
+  "splitType": "EQUAL",
+  "description": "Lunch at beachside restaurant.",
+  "participants": [
+    {
+      "userId": "userId1"
+    },
+    {
+      "userId": "userId2",
+      "amount": 600
+    }
+  ]
+}
+```
+- **Validation Notes:**
+  - `planId`: Required
+  - `payerId`: Required (User ID of person who paid)
+  - `amount`: Required, positive number
+  - `category`: Required, must be: FOOD, TRANSPORT, ACCOMMODATION, ACTIVITY, SHOPPING, OTHER
+  - `expenseDate`: Required, date format (YYYY-MM-DD)
+  - `splitType`: Required, must be: EQUAL, CUSTOM, PERCENTAGE
+  - `currency`: Optional (default: USD)
+  - `description`: Optional, max 1000 characters
+  - `locationId`: Optional, UUID
+  - `participants`: Array of objects with:
+    - `userId`: Required
+    - `amount`: Optional (required for CUSTOM split, sum must equal total)
+    - `percentage`: Optional (required for PERCENTAGE split, sum must equal 100)
+  - **Split Type Rules:**
+    - **EQUAL:** participants optional, split equally among all participants
+    - **CUSTOM:** participants required with `amount` field, sum must equal total amount
+    - **PERCENTAGE:** participants required with `percentage` field, sum must equal 100
+
+**Update Expense:**
+- **Endpoint:** `PATCH /api/v1/expenses/:expenseId`
+- **Authentication:** Required (creator or plan admin only)
+- **Request Body:** All fields optional
+```json
+{
+  "amount": 1500,
+  "category": "FOOD",
+  "description": "Updated expense description",
+  "expenseDate": "2025-09-22"
+}
+```
+- **Validation Notes:**
+  - `planId` and `splitType` cannot be updated
+  - All other fields can be updated
+
+**Delete Expense:**
+- **Endpoint:** `DELETE /api/v1/expenses/:expenseId`
+- **Authentication:** Required (creator or plan admin only)
+- **Success:** Returns success message
+
+**Settle Expense:**
+- **Endpoint:** `PATCH /api/v1/expenses/:expenseId/settle/:participantId`
+- **Authentication:** Required
+- **Important:** Uses `participantId` (ExpenseParticipant ID), NOT `userId`
+- **No body needed**
+- **Success:** Marks participant as settled (paid)
+
+**Expenses Summary:**
+- **Endpoint:** `GET /api/v1/expenses/summary?planId=:planId`
+- **Authentication:** Required
+- **Query Parameter:** `planId` (required)
+- **Response:** Returns total expenses, breakdown by category, breakdown by payer, settlement calculations (who owes whom with net amounts), and budget comparison
+
+---
+
 #### Expense Summary Card
 
 **Layout:** Summary cards at top (3-4 cards)
@@ -2020,19 +2990,32 @@ Same as login page (split or centered)
 **Filters:**
 
 - **Category Filter:** All, Food, Transport, Accommodation, Activity, Shopping, Other
-- **Status Filter:** All, Settled, Unsettled
+  - **API Parameter:** `category` (values: "FOOD", "TRANSPORT", "ACCOMMODATION", "ACTIVITY", "SHOPPING", "OTHER", omit for "All")
+- **Payer Filter:** Filter by payer (optional)
+  - **API Parameter:** `payerId`
+- **Split Type Filter:** Filter by split type (optional)
+  - **API Parameter:** `splitType` (values: "EQUAL", "CUSTOM", "PERCENTAGE")
 - **Date Range:** Start date - End date picker
+  - **API Parameters:** `startDate`, `endDate` (YYYY-MM-DD format)
+- **Search:** Search in description
+  - **API Parameter:** `searchTerm`
 - **Clear Filters Button:** "Clear All"
 
 **Sort Options:**
 
 - **Dropdown:** Date (newest first), Date (oldest first), Amount (high to low), Amount (low to high)
 - **Default:** Date (newest first)
+- **API Parameters:**
+  - `sortBy`: Sort field (optional)
+  - `sortOrder`: "asc" or "desc" (default: "desc")
+- **Pagination:**
+  - **API Parameters:** `page`, `limit`
+  - Use `meta.page`, `meta.limit`, `meta.total` from response
 
 **View Toggle:**
 
 - **List View:** Default
-- **Grouped View:** Group by category or date (optional)
+- **Grouped View:** Group by category or date (optional, client-side)
 
 ---
 
@@ -2041,16 +3024,16 @@ Same as login page (split or centered)
 **Display:**
 
 - **Category Badge:** Food, Transport, etc. (with icon and color)
-- **Title:** Expense title (bold, 16px)
 - **Amount:** Large, prominent (e.g., "$150.00")
 - **Currency:** Display currency code
 - **Paid By:**
-  - User avatar/name
+  - User avatar/name (from `payer` object)
   - "Paid by [Name]" text
 - **Participants:**
   - List of participants with avatars
   - Amount each owes (for custom/percentage splits)
-- **Date:** Expense date (formatted)
+  - Settlement status for each participant
+- **Date:** Expense date (formatted from `expenseDate`)
 - **Description:** Expense description (if available, gray text)
 - **Settlement Status Badge:**
   - Fully Settled (green)
@@ -2058,8 +3041,12 @@ Same as login page (split or centered)
   - Unsettled (red)
 - **Actions:**
   - Edit (pencil icon) → Opens edit form
+    - **API:** `PATCH /api/v1/expenses/:expenseId`
   - Delete (trash icon) → Confirmation modal
+    - **API:** `DELETE /api/v1/expenses/:expenseId`
   - Settle (checkmark icon) → Settlement modal
+    - **API:** `PATCH /api/v1/expenses/:expenseId/settle/:participantId`
+    - **Important:** Use ExpenseParticipant ID (not userId)
 
 **Styling:**
 
@@ -2078,13 +3065,15 @@ Same as login page (split or centered)
 
 **Form Fields:**
 
-**Title** (required):
+**Payer** (required):
 
-- **Type:** text input
-- **Label:** "Expense Title \*"
-- **Placeholder:** "e.g., Dinner at Restaurant"
-- **Validation:** Required, min 3 characters, max 200 characters
-- **Error:** "Title must be between 3 and 200 characters"
+- **Type:** select dropdown
+- **Label:** "Paid By \*"
+- **Placeholder:** "Select who paid"
+- **Options:** All plan members (with avatars)
+- **Validation:** Required
+- **Error:** "Please select who paid for this expense"
+- **Backend Field:** `payerId` (User ID, required)
 
 **Amount** (required):
 
@@ -2138,22 +3127,32 @@ Same as login page (split or centered)
 - **Type:** Multi-select dropdown or checkboxes
 - **Label:** "Participants \*"
 - **Options:** All plan members (with avatars)
-- **Default:** All members selected
+- **Default:** All members selected (excluding payer)
 - **Validation:** At least 1 participant required
 - **Error:** "Please select at least one participant"
+- **Backend Field:** `participants` (array of objects)
+- **Participant Object Structure:**
+  - `userId`: Required (User ID)
+  - `amount`: Optional (required for CUSTOM split)
+  - `percentage`: Optional (required for PERCENTAGE split)
 - **Custom/Percentage Split:**
-  - If Custom or Percentage selected, show amount input for each participant
-  - Total must equal expense amount
-  - Validation: "Total must equal expense amount"
+  - If **CUSTOM** selected: Show amount input for each participant
+    - Total of all amounts must equal expense amount
+    - Validation: "Total must equal expense amount"
+  - If **PERCENTAGE** selected: Show percentage input for each participant
+    - Total of all percentages must equal 100
+    - Validation: "Total percentage must equal 100"
+  - If **EQUAL** selected: No amount/percentage needed, split equally
 
 **Date** (required):
 
 - **Type:** date picker
-- **Label:** "Date \*"
+- **Label:** "Expense Date \*"
 - **Placeholder:** "Select date"
 - **Default:** Today
 - **Validation:** Required, must be within plan date range
 - **Error:** "Date must be within the travel plan dates"
+- **Backend Field:** `expenseDate` (YYYY-MM-DD format, not `date`)
 
 **Description** (optional):
 
@@ -2169,7 +3168,41 @@ Same as login page (split or centered)
 - **Cancel Button:** Close modal without saving
 - **Save Button:** Create expense
 - **Loading State:** Show spinner during submission
-- **Success:** Close modal, refresh expense list, show success toast
+- **API Call:** `POST /api/v1/expenses` with `credentials: 'include'`
+- **Request Body:** Convert form data to API format:
+```json
+{
+  "planId": "planId",
+  "payerId": "payerId",
+  "amount": 1200,
+  "currency": "BDT",
+  "category": "FOOD",
+  "expenseDate": "2025-09-21",
+  "splitType": "EQUAL",
+  "description": "Lunch at beachside restaurant.",
+  "participants": [
+    {
+      "userId": "userId1"
+    },
+    {
+      "userId": "userId2",
+      "amount": 600
+    }
+  ]
+}
+```
+- **Validation Notes:**
+  - `payerId`: Required (User ID of person who paid)
+  - `expenseDate`: Date format (YYYY-MM-DD)
+  - `splitType`: EQUAL, CUSTOM, or PERCENTAGE
+  - For CUSTOM: Each participant must have `amount`, sum must equal total
+  - For PERCENTAGE: Each participant must have `percentage`, sum must equal 100
+  - For EQUAL: No amount/percentage needed
+- **Success:** 
+  - Close modal
+  - Refresh expense list using `GET /api/v1/expenses?planId=:planId`
+  - Show success toast: "Expense created successfully"
+- **Error:** Display error from `errorMessages` array
 
 **Styling:**
 
@@ -2206,8 +3239,15 @@ Same as login page (split or centered)
 
 - **Settle Button:** "Mark as Settled"
 - **Action:** Opens confirmation modal
-- **Confirmation:** "Mark [Participant Name] as settled for [Expense Title]?"
-- **Success:** Update expense, refresh list
+- **Confirmation:** "Mark [Participant Name] as settled for this expense?"
+- **API Call:** `PATCH /api/v1/expenses/:expenseId/settle/:participantId` with `credentials: 'include'`
+- **Important:** Use `participantId` (ExpenseParticipant ID from expense.participants array), NOT `userId`
+- **No body needed**
+- **Success:** 
+  - Update expense in list
+  - Refresh expense details
+  - Show success toast: "Expense marked as settled"
+- **Error:** Display error message
 
 **Styling:**
 
@@ -2242,12 +3282,139 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Get All Meetups For a Plan:**
+- **Endpoint:** `GET /api/v1/meetups`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `planId`: Filter by plan ID (required for plan-specific view)
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+  - `sortBy`: Sort field (optional)
+  - `sortOrder`: "asc" or "desc" (optional, default: "desc")
+  - `searchTerm`: Search in location (optional)
+  - `status`: Filter by status - "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED" (optional)
+  - `organizerId`: Filter by organizer ID (optional)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Meetups retrieved successfully.",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 25
+  },
+  "data": [
+    {
+      "id": "meetupId",
+      "planId": "planId",
+      "organizerId": "userId",
+      "scheduledAt": "2025-09-20T16:00:00.000Z",
+      "location": "Cafe Rio",
+      "locationId": "locationId",
+      "maxParticipants": 8,
+      "status": "PENDING",
+      "videoRoomLink": "url",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "plan": { ... },
+      "organizer": { ... },
+      "rsvps": [ ... ]
+    }
+  ]
+}
+```
+
+**Get Single Meetup:**
+- **Endpoint:** `GET /api/v1/meetups/:meetupId`
+- **Authentication:** Required
+- **Response:** Returns meetup with plan, organizer, and RSVPs
+
+**Create Meetup:**
+- **Endpoint:** `POST /api/v1/meetups`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "planId": "planId",
+  "scheduledAt": "2025-09-20T16:00:00.000Z",
+  "location": "Cafe Rio",
+  "maxParticipants": 8
+}
+```
+- **Validation Notes:**
+  - `planId`: Required
+  - `scheduledAt`: Required, ISO datetime string, must be future date
+  - `location`: Optional, max 500 characters
+  - `locationId`: Optional, UUID (mutually exclusive with `location` - provide only one)
+  - `maxParticipants`: Optional, positive integer
+  - `videoRoomLink`: Optional, valid URL
+  - **Important:** Error will be shown if travel plan has ended (plan.endDate < today)
+- **Error Messages:**
+  - "This travel plan has ended. No meetup can be scheduled now for this plan."
+  - "Scheduled date must be a valid future date."
+
+**Update Meetup:**
+- **Endpoint:** `PATCH /api/v1/meetups/:meetupId`
+- **Authentication:** Required (organizer/admin only)
+- **Request Body:** All fields optional
+```json
+{
+  "scheduledAt": "2025-09-21T16:00:00.000Z",
+  "location": "New Location",
+  "maxParticipants": 10
+}
+```
+- **Validation Notes:**
+  - `scheduledAt`: Must be future date if provided
+  - `location` and `locationId` are mutually exclusive
+
+**RSVP To Meetup:**
+- **Endpoint:** `POST /api/v1/meetups/:meetupId/rsvp`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "status": "ACCEPTED"
+}
+```
+- **Validation Notes:**
+  - `status`: Required, must be "ACCEPTED" or "DECLINED"
+  - `meetupId`: In URL path
+
+**Update Meetup Status:**
+- **Endpoint:** `PATCH /api/v1/meetups/:meetupId/status`
+- **Authentication:** Required (organizer/admin only)
+- **Request Body:**
+```json
+{
+  "status": "CONFIRMED"
+}
+```
+- **Validation Notes:**
+  - `status`: Required, must be one of: "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"
+  - Valid transitions: PENDING → CONFIRMED/CANCELLED, CONFIRMED → COMPLETED/CANCELLED
+  - COMPLETED and CANCELLED cannot be changed
+
+**Remove Meetup:**
+- **Endpoint:** `DELETE /api/v1/meetups/:meetupId`
+- **Authentication:** Required (organizer/admin only)
+- **Success:** Returns success message
+
+---
+
 #### Meetup List
 
 **Filters:**
 
 - **Status Filter:** All, Pending, Confirmed, Completed, Cancelled
-- **Date Range:** Start date - End date picker
+  - **API Parameter:** `status` (values: "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", omit for "All")
+- **Search:** Search in location
+  - **API Parameter:** `searchTerm`
+- **Organizer Filter:** Filter by organizer (optional)
+  - **API Parameter:** `organizerId`
 - **Clear Filters Button:** "Clear All"
 
 **View Toggle:**
@@ -2259,6 +3426,12 @@ Same as login page (split or centered)
 
 - **Dropdown:** Date (upcoming first), Date (past first), Status
 - **Default:** Date (upcoming first)
+- **API Parameters:** 
+  - `sortBy`: Sort field (optional)
+  - `sortOrder`: "asc" or "desc" (default: "desc")
+- **Pagination:**
+  - **API Parameters:** `page`, `limit`
+  - Use `meta.page`, `meta.limit`, `meta.total` from response
 
 ---
 
@@ -2290,10 +3463,15 @@ Same as login page (split or centered)
   - "RSVP" button (if not responded)
 - **Actions:**
   - View Details (eye icon) → Full meetup details
+    - **API:** `GET /api/v1/meetups/:meetupId`
   - RSVP (if not organizer) → Accept/Decline buttons
+    - **API:** `POST /api/v1/meetups/:meetupId/rsvp` with `{ status: "ACCEPTED" | "DECLINED" }`
   - Edit (if organizer/plan owner) → Edit form
+    - **API:** `PATCH /api/v1/meetups/:meetupId`
   - Delete (if organizer/plan owner) → Confirmation modal
+    - **API:** `DELETE /api/v1/meetups/:meetupId`
   - Update Status (if organizer/plan owner) → Status update dropdown
+    - **API:** `PATCH /api/v1/meetups/:meetupId/status` with `{ status: "CONFIRMED" | "COMPLETED" | "CANCELLED" }`
 
 **Styling:**
 
@@ -2340,21 +3518,40 @@ Same as login page (split or centered)
 - **Error:** "Maximum participants must be at least 1"
 - **Help Text:** "Leave empty to allow unlimited participants"
 
-**Description** (optional):
+**Video Room Link** (optional):
 
-- **Type:** textarea
-- **Label:** "Description"
-- **Placeholder:** "What's this meetup about? Add any details..."
-- **Max Length:** 1000 characters
-- **Character Counter:** "X / 1000 characters"
-- **Rows:** 4-5
+- **Type:** URL input
+- **Label:** "Video Room Link"
+- **Placeholder:** "https://meet.google.com/..."
+- **Validation:** Must be valid URL if provided
+- **Help Text:** "Optional video call link for virtual meetups"
 
 **Form Actions:**
 
 - **Cancel Button:** Close modal without saving
 - **Create Button:** Create meetup
 - **Loading State:** Show spinner during submission
-- **Success:** Close modal, refresh meetup list, show success toast
+- **API Call:** `POST /api/v1/meetups` with `credentials: 'include'`
+- **Request Body:**
+```json
+{
+  "planId": "planId",
+  "scheduledAt": "2025-09-20T16:00:00.000Z",
+  "location": "Cafe Rio",
+  "maxParticipants": 8
+}
+```
+- **Validation Notes:**
+  - `scheduledAt` must be future date (ISO datetime string)
+  - `location` and `locationId` are mutually exclusive (provide only one)
+  - Plan must not have ended (plan.endDate >= today)
+- **Success:** 
+  - Close modal
+  - Refresh meetup list using `GET /api/v1/meetups?planId=:planId`
+  - Show success toast: "Meetup created successfully"
+- **Error:** Display error from `errorMessages` array
+  - "This travel plan has ended. No meetup can be scheduled now for this plan."
+  - "Scheduled date must be a valid future date."
 
 **Styling:**
 
@@ -2383,6 +3580,24 @@ Same as login page (split or centered)
 - **Max Participants Check:**
   - If accepting and max participants reached: Show error
   - Error: "Maximum participants limit reached. Cannot accept RSVP."
+
+**RSVP API Call:**
+
+- **Endpoint:** `POST /api/v1/meetups/:meetupId/rsvp` with `credentials: 'include'`
+- **Request Body:**
+```json
+{
+  "status": "ACCEPTED"
+}
+```
+- **Validation Notes:**
+  - `status`: Required, must be "ACCEPTED" or "DECLINED"
+  - `meetupId`: In URL path
+- **Success:** 
+  - Update RSVP status in UI
+  - Refresh meetup details
+  - Show success toast
+- **Error:** Display error message
 
 **RSVP Status Display:**
 
@@ -2414,6 +3629,26 @@ Same as login page (split or centered)
   - CONFIRMED → COMPLETED
   - CONFIRMED → CANCELLED
 - **Disabled:** COMPLETED and CANCELLED cannot be changed
+
+**Status Update API Call:**
+
+- **Endpoint:** `PATCH /api/v1/meetups/:meetupId/status` with `credentials: 'include'`
+- **Request Body:**
+```json
+{
+  "status": "CONFIRMED"
+}
+```
+- **Validation Notes:**
+  - `status`: Required, must be one of: "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"
+  - Valid transitions: PENDING → CONFIRMED/CANCELLED, CONFIRMED → COMPLETED/CANCELLED
+  - COMPLETED and CANCELLED cannot be changed
+- **Success:** 
+  - Update status in UI
+  - Refresh meetup details
+  - Show success toast
+  - Notification sent to participants on status change
+- **Error:** Display error message if invalid transition
 
 **Status Update Rules:**
 
@@ -2462,6 +3697,77 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**List Media Files:**
+- **Endpoint:** `GET /api/v1/media`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `type`: Filter by type - "photo" or "video" (optional)
+  - `ownerId`: Filter by owner ID (UUID, optional)
+  - `planId`: Filter by plan ID (UUID, optional)
+  - `meetupId`: Filter by meetup ID (UUID, optional)
+  - `itineraryItemId`: Filter by itinerary item ID (UUID, optional)
+  - `provider`: Filter by provider (optional)
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+  - `sortBy`: Sort field (optional)
+  - `sortOrder`: "asc" or "desc" (optional)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Media files retrieved successfully.",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 50
+  },
+  "data": [
+    {
+      "id": "mediaId",
+      "ownerId": "userId",
+      "planId": "planId",
+      "meetupId": "meetupId",
+      "itineraryItemId": "itineraryItemId",
+      "url": "https://cloudinary-url/image.jpg",
+      "type": "photo",
+      "provider": "cloudinary",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Get Single Media:**
+- **Endpoint:** `GET /api/v1/media/:mediaId`
+- **Authentication:** Required
+- **Response:** Returns media details including URL, type, and associated entity
+
+**Upload Media File:**
+- **Endpoint:** `POST /api/v1/media`
+- **Authentication:** Required
+- **Content-Type:** `multipart/form-data`
+- **Form Data:**
+  - `files`: File(s) to upload (required, can be multiple, max 10 files)
+  - `planId`: Associate with plan (UUID, optional)
+  - `meetupId`: Associate with meetup (UUID, optional)
+  - `itineraryItemId`: Associate with itinerary item (UUID, optional)
+  - `type`: Media type - "photo" or "video" (optional)
+- **Validation Notes:**
+  - At least one of `planId`, `meetupId`, or `itineraryItemId` must be provided
+  - Max 10 files per request
+  - File size and type validation handled by backend
+- **Success:** Returns array of uploaded media objects
+
+**Delete Media File:**
+- **Endpoint:** `DELETE /api/v1/media/:mediaId`
+- **Authentication:** Required (creator/admin only)
+- **Success:** Returns success message
+
+---
+
 #### Upload Section
 
 **Drag & Drop Area:**
@@ -2491,6 +3797,26 @@ Same as login page (split or centered)
 - **After Upload:** Show uploaded images with success checkmark
 - **Remove Button:** Remove file before upload (X icon)
 
+**Upload API Call:**
+
+- **Endpoint:** `POST /api/v1/media` with `credentials: 'include'`
+- **Content-Type:** `multipart/form-data`
+- **Form Data:**
+  - `files`: Array of files (required, max 10 files)
+  - `planId`: Plan ID (optional, but at least one of planId/meetupId/itineraryItemId required)
+  - `meetupId`: Meetup ID (optional)
+  - `itineraryItemId`: Itinerary item ID (optional)
+  - `type`: "photo" or "video" (optional)
+- **Validation:**
+  - Max 10 files per request
+  - File type: JPEG, PNG, WebP (for photos)
+  - Max file size: 5MB per file
+- **Success:** 
+  - Show success toast for each uploaded file
+  - Refresh gallery using `GET /api/v1/media?planId=:planId`
+  - Display uploaded images in gallery
+- **Error:** Display error from `errorMessages` array
+
 **Styling:**
 
 - Large, prominent drop zone
@@ -2517,15 +3843,28 @@ Same as login page (split or centered)
 
 **Filters:**
 
-- **Filter by Date:** All, Today, This Week, This Month, Custom Range
-- **Filter by Type:** All, Plan Photos, Meetup Photos, Itinerary Photos
+- **Filter by Type:** All, Photo, Video
+  - **API Parameter:** `type` (values: "photo" or "video", omit for "All")
+- **Filter by Association:** All, Plan Photos, Meetup Photos, Itinerary Photos
+  - **API Parameters:** `planId`, `meetupId`, `itineraryItemId` (UUIDs, optional)
+- **Filter by Owner:** Filter by uploader (optional)
+  - **API Parameter:** `ownerId` (UUID)
+- **Filter by Provider:** Filter by storage provider (optional)
+  - **API Parameter:** `provider`
 - **Sort:** Newest, Oldest, File Size
+  - **API Parameters:**
+    - `sortBy`: Sort field (optional)
+    - `sortOrder`: "asc" or "desc" (optional)
+- **Pagination:**
+  - **API Parameters:** `page`, `limit`
+  - Use `meta.page`, `meta.limit`, `meta.total` from response
 - **Clear Filters Button:** "Clear All"
 
 **Search:**
 
 - **Search Input:** "Search media by description..."
-- **Real-time Filtering:** Filter as user types
+- **Note:** Search functionality not available in current API (can be implemented client-side)
+- **Real-time Filtering:** Filter as user types (client-side if needed)
 
 ---
 
@@ -2541,8 +3880,11 @@ Same as login page (split or centered)
 **Hover Overlay:**
 
 - **View Button:** Eye icon → Opens lightbox
+  - **API:** `GET /api/v1/media/:mediaId` to fetch full media details
 - **Delete Button:** Trash icon → Confirmation modal
+  - **API:** `DELETE /api/v1/media/:mediaId` (creator/admin only)
 - **Info Button:** Info icon → Shows metadata (optional)
+  - **API:** `GET /api/v1/media/:mediaId` to fetch details
 
 **Metadata (on hover or in list view):**
 
@@ -2609,7 +3951,11 @@ Same as login page (split or centered)
   - Cancel → Close modal
   - Delete → Confirm deletion
 - **Loading State:** Show spinner during deletion
-- **Success:** Remove from gallery, show success toast
+- **API Call:** `DELETE /api/v1/media/:mediaId` with `credentials: 'include'`
+- **Success:** 
+  - Remove from gallery
+  - Show success toast: "Media deleted successfully"
+- **Error:** Display error message
 
 **Styling:**
 
@@ -2641,6 +3987,170 @@ Same as login page (split or centered)
 "Chat - [Plan Name]"
 
 **Breadcrumb:** Dashboard > Travel Plans > [Plan Name] > Chat
+
+---
+
+#### API Integration
+
+**Get Chat Thread By Plan:**
+- **Endpoint:** `GET /api/v1/chat/threads?planId=:planId`
+- **Authentication:** Required
+- **Query Parameter:** `planId` (required, in query string, not URL path)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Chat thread found successfully.",
+  "data": {
+    "id": "threadId",
+    "type": "PLAN",
+    "refId": "planId",
+    "title": "Chat: Spring Trip to Cox's Bazar",
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z",
+    "members": [
+      {
+        "id": "memberId",
+        "threadId": "threadId",
+        "userId": "userId",
+        "role": "owner",
+        "joinedAt": "2025-01-01T00:00:00.000Z",
+        "user": {
+          "id": "userId",
+          "fullName": "User Name",
+          "email": "user@example.com",
+          "profileImage": "url"
+        }
+      }
+    ]
+  }
+}
+```
+- **Note:** Returns 404 if thread doesn't exist (create one if needed)
+
+**Get Thread By ID:**
+- **Endpoint:** `GET /api/v1/chat/threads/:threadId`
+- **Authentication:** Required
+- **Response:** Same structure as Get Thread By Plan
+
+**Create New Chat Thread:**
+- **Endpoint:** `POST /api/v1/chat/threads`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "type": "PLAN",
+  "refId": "planId",
+  "title": "Trip Planning Chat"
+}
+```
+- **Validation Notes:**
+  - `type`: Required, must be "PLAN" (for plan-based chats)
+  - `refId`: Required, the planId
+  - `title`: Optional, auto-generated if not provided
+- **Note:** Members are added separately via Add Member endpoint
+
+**Add Member to Thread:**
+- **Endpoint:** `POST /api/v1/chat/threads/:threadId/members`
+- **Authentication:** Required (thread owner/admin only)
+- **Request Body:**
+```json
+{
+  "userId": "userId",
+  "role": "member"
+}
+```
+- **Validation Notes:**
+  - `userId`: Required, must be actual User ID (not TripMember ID)
+  - `role`: Required, must be one of: "owner", "admin", "member"
+- **Error Messages:**
+  - "Target user not found" (if userId doesn't exist)
+  - "User is already a member of this thread"
+
+**Get Messages in Thread:**
+- **Endpoint:** `GET /api/v1/chat/threads/:threadId/messages`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `cursor`: ISO datetime string for cursor pagination (optional, use `nextCursor` from previous response)
+  - `limit`: Number of messages per page (1-100, default: 30)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Messages retrieved successfully.",
+  "data": {
+    "messages": [
+      {
+        "id": "messageId",
+        "threadId": "threadId",
+        "senderId": "userId",
+        "content": "Hello everyone!",
+        "attachments": [],
+        "isEdited": false,
+        "isDeleted": false,
+        "createdAt": "2025-01-01T00:00:00.000Z",
+        "updatedAt": "2025-01-01T00:00:00.000Z",
+        "sender": {
+          "id": "userId",
+          "fullName": "User Name",
+          "email": "user@example.com",
+          "profileImage": "url"
+        }
+      }
+    ],
+    "nextCursor": "2025-01-01T00:00:00.000Z",
+    "hasMore": true
+  }
+}
+```
+- **Pagination:** Use `cursor` for next page, `hasMore` to show/hide "Load More" button
+- **Note:** Messages are returned in descending order (newest first), reverse for display
+
+**Send Message:**
+- **Endpoint:** `POST /api/v1/chat/threads/:threadId/messages`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "content": "Hello everyone!",
+  "attachments": [
+    {
+      "url": "https://example.com/image.jpg",
+      "type": "image/jpeg"
+    }
+  ]
+}
+```
+- **Validation Notes:**
+  - `content`: Required, 1-5000 characters
+  - `attachments`: Optional array, max 10 items
+  - Each attachment: `url` (required), `type` (optional)
+- **Success:** Returns created message object
+
+**Edit Message:**
+- **Endpoint:** `PATCH /api/v1/chat/messages/:messageId`
+- **Authentication:** Required (own messages only)
+- **Request Body:**
+```json
+{
+  "content": "Updated message content"
+}
+```
+- **Validation Notes:**
+  - `content`: Required, 1-5000 characters
+  - Can only edit own messages within 15 minutes of sending
+- **Success:** Returns updated message object with `isEdited: true`
+- **Error:** "You can only edit your own messages" or "Message cannot be edited after 15 minutes"
+
+**Delete Message:**
+- **Endpoint:** `DELETE /api/v1/chat/messages/:messageId`
+- **Authentication:** Required (own messages only)
+- **Success:** Returns success message
+- **Error:** "You can only delete your own messages"
+
+**Get My Planning Sessions** (for thread list):
+- **Endpoint:** `GET /api/v1/chat/threads` (if available, or use plan-based threads)
+- **Note:** Currently, threads are plan-based. Use Get Thread By Plan to fetch thread for a plan.
 
 ---
 
@@ -2683,6 +4193,13 @@ Same as login page (split or centered)
 
 - **Settings:** Thread settings (mute, leave, etc.)
 - **Member Management:** Add/remove members (if user has permission)
+  - **Add Member:** 
+    - Opens modal with user search/select
+    - **API:** `POST /api/v1/chat/threads/:threadId/members` with `{ userId, role: "member" }`
+    - **Important:** Use actual User ID (not TripMember ID)
+    - **Role Options:** "owner", "admin", "member"
+    - **Success:** Refresh thread members list
+    - **Error:** "Target user not found" or "User is already a member"
 
 **Styling:**
 
@@ -2697,10 +4214,16 @@ Same as login page (split or centered)
 **Layout:**
 
 - **Scrollable Container:** Auto-scroll to bottom on new messages
-- **Message List:** Chronological order (oldest to newest)
+- **Message List:** Chronological order (oldest to newest) - reverse API response order
 - **Date Separators:** "Today", "Yesterday", "[Date]" between messages
 - **Loading State:** Show spinner while loading messages
-- **Load More:** "Load older messages" button at top (pagination)
+- **Load More:** "Load older messages" button at top (cursor pagination)
+- **API Call:** `GET /api/v1/chat/threads/:threadId/messages?limit=30`
+- **Pagination:**
+  - Initial load: No cursor, limit=30
+  - Load more: Use `nextCursor` from previous response as `cursor` parameter
+  - Show "Load More" button if `hasMore: true`
+  - Hide button if `hasMore: false`
 
 **Message Bubbles:**
 
@@ -2732,10 +4255,17 @@ Same as login page (split or centered)
 
 **Message Actions** (Hover or long-press):
 
-- **Edit:** Edit own messages (within time limit)
+- **Edit:** Edit own messages (within 15 minutes)
+  - **API:** `PATCH /api/v1/chat/messages/:messageId` with `{ content: string }`
+  - **Success:** Update message, show "(edited)" indicator
+  - **Error:** "You can only edit your own messages" or "Message cannot be edited after 15 minutes"
 - **Delete:** Delete own messages
-- **Copy:** Copy message text
-- **Reply:** Reply to message (optional feature)
+  - **API:** `DELETE /api/v1/chat/messages/:messageId`
+  - **Confirmation:** Show confirmation modal
+  - **Success:** Remove message from list
+  - **Error:** "You can only delete your own messages"
+- **Copy:** Copy message text (client-side only)
+- **Reply:** Reply to message (optional feature, not in current API)
 
 **Styling:**
 
@@ -2752,21 +4282,44 @@ Same as login page (split or centered)
 
 - **Type:** Textarea (auto-resize)
 - **Placeholder:** "Type a message..."
-- **Max Length:** 2000 characters
-- **Character Counter:** "X / 2000" (optional, shown near limit)
+- **Max Length:** 5000 characters (backend limit)
+- **Character Counter:** "X / 5000" (optional, shown near limit)
+- **Validation:** Min 1 character, max 5000 characters
 - **Features:**
   - Emoji picker (optional)
-  - File attachment (optional, for future)
+  - File attachment (optional) - supports attachments array
   - Mention users with @ (optional, for future)
+- **API Call:** `POST /api/v1/chat/threads/:threadId/messages` with `credentials: 'include'`
+- **Request Body:**
+```json
+{
+  "content": "Hello everyone!",
+  "attachments": [
+    {
+      "url": "https://example.com/image.jpg",
+      "type": "image/jpeg"
+    }
+  ]
+}
+```
+- **Validation Notes:**
+  - `content`: Required, 1-5000 characters
+  - `attachments`: Optional array, max 10 items
+  - Each attachment: `url` (required), `type` (optional MIME type)
 
 **Send Button:**
 
 - **Icon:** Send icon (paper plane)
 - **State:**
-  - Enabled when input has text
+  - Enabled when input has text (min 1 char)
   - Disabled when input is empty
   - Loading state during send
 - **Keyboard:** Enter to send (Shift+Enter for new line)
+- **Success:** 
+  - Clear input field
+  - Add message to list (optimistic update or refresh)
+  - Auto-scroll to bottom
+- **Error:** Display error from `errorMessages` array
 
 **Typing Indicator:**
 
@@ -2818,11 +4371,28 @@ Same as login page (split or centered)
 
 - **Trigger:** Click edit button on own message
 - **Display:** Input field replaces message bubble
+- **Pre-fill:** Current message content
 - **Actions:**
   - Save button → Update message
   - Cancel button → Cancel edit
 - **Loading State:** Show spinner during update
-- **Success:** Update message, show "(edited)" indicator
+- **API Call:** `PATCH /api/v1/chat/messages/:messageId` with `credentials: 'include'`
+- **Request Body:**
+```json
+{
+  "content": "Updated message content"
+}
+```
+- **Validation:** Content must be 1-5000 characters
+- **Time Limit:** Can only edit within 15 minutes of sending
+- **Success:** 
+  - Update message in list
+  - Show "(edited)" indicator
+  - Set `isEdited: true` on message object
+- **Error:** 
+  - "You can only edit your own messages"
+  - "Message cannot be edited after 15 minutes"
+  - Display error from `errorMessages` array
 
 **Styling:**
 
@@ -2841,7 +4411,13 @@ Same as login page (split or centered)
   - Cancel → Close modal
   - Delete → Confirm deletion
 - **Loading State:** Show spinner during deletion
-- **Success:** Remove message, show success toast
+- **API Call:** `DELETE /api/v1/chat/messages/:messageId` with `credentials: 'include'`
+- **Success:** 
+  - Remove message from list
+  - Show success toast: "Message deleted"
+- **Error:** 
+  - "You can only delete your own messages"
+  - Display error message
 
 **Styling:**
 
@@ -2883,18 +4459,125 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**List Reviews:**
+- **Endpoint:** `GET /api/v1/reviews`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `rating`: Filter by rating (1-5, optional)
+  - `source`: Filter by source - "USER_TO_USER" or "USER_TO_TRIP" (optional)
+  - `reviewerId`: Filter by reviewer ID (UUID, optional)
+  - `reviewedUserId`: Filter by reviewed user ID (UUID, optional)
+  - `planId`: Filter by plan ID (UUID, optional)
+  - `isEdited`: Filter by edited status - "true" or "false" (optional)
+  - `searchTerm`: Search in comments (optional)
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+  - `sortBy`: Sort field (optional)
+  - `sortOrder`: "asc" or "desc" (optional)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Reviews retrieved successfully.",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 50
+  },
+  "data": [
+    {
+      "id": "reviewId",
+      "reviewerId": "userId",
+      "reviewedUserId": "userId",
+      "planId": "planId",
+      "rating": 5,
+      "comment": "Great travel companion!",
+      "source": "USER_TO_USER",
+      "isEdited": false,
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "reviewer": { ... },
+      "reviewedUser": { ... },
+      "plan": { ... }
+    }
+  ]
+}
+```
+
+**Get Single Review:**
+- **Endpoint:** `GET /api/v1/reviews/:reviewId`
+- **Authentication:** Required
+- **Response:** Returns review details with reviewer and reviewed entity information
+
+**Get Review Statistics:**
+- **Endpoint:** `GET /api/v1/reviews/statistics?userId=:userId&planId=:planId`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `userId`: Filter by user ID (UUID, optional)
+  - `planId`: Filter by plan ID (UUID, optional)
+- **Response:** Returns aggregated review statistics (average rating, total reviews, rating distribution)
+- **Use Case:** Display statistics in Received Reviews tab
+
+**Create Review:**
+- **Endpoint:** `POST /api/v1/reviews`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "rating": 5,
+  "comment": "Great travel companion!",
+  "source": "USER_TO_USER",
+  "reviewedUserId": "userId"
+}
+```
+- **Validation Notes:**
+  - `rating`: Required, integer 1-5
+  - `source`: Required, must be "USER_TO_USER" or "USER_TO_TRIP"
+  - `comment`: Optional, string
+  - If `source` is "USER_TO_USER": `reviewedUserId` (UUID) is required
+  - If `source` is "USER_TO_TRIP": `planId` (UUID) is required
+- **Success:** Returns created review object
+
+**Update Review:**
+- **Endpoint:** `PATCH /api/v1/reviews/:reviewId`
+- **Authentication:** Required (own reviews only)
+- **Request Body:** All fields optional
+```json
+{
+  "rating": 4,
+  "comment": "Good, but could improve communication."
+}
+```
+- **Success:** Returns updated review object with `isEdited: true`
+
+**Delete Review:**
+- **Endpoint:** `DELETE /api/v1/reviews/:reviewId`
+- **Authentication:** Required (own reviews or admin)
+- **Success:** Returns success message
+
+---
+
 #### Tabs Navigation
 
 **Two Tabs:**
 
 1. **Given Reviews Tab**
    - Reviews you've written
+   - **API:** `GET /api/v1/reviews?reviewerId=:currentUserId`
    - Filter: All, User Reviews, Trip Reviews
+   - **API Parameter:** `source` (values: "USER_TO_USER" or "USER_TO_TRIP", omit for "All")
    - Default: All
 
 2. **Received Reviews Tab**
    - Reviews about you or your trips
+   - **API:** `GET /api/v1/reviews?reviewedUserId=:currentUserId` (for user reviews) or `GET /api/v1/reviews?planId=:planId` (for trip reviews)
+   - **API:** `GET /api/v1/reviews/statistics?userId=:currentUserId` for statistics
    - Filter: All, About Me, About My Trips
+   - **API Parameters:** 
+     - About Me: `reviewedUserId=:currentUserId`
+     - About My Trips: `planId=:planId` (for each plan)
    - Default: All
 
 **Styling:**
@@ -2910,8 +4593,18 @@ Same as login page (split or centered)
 **Filters:**
 
 - **Type Filter:** All, User Reviews, Trip Reviews (for Given Reviews)
+  - **API Parameter:** `source` (values: "USER_TO_USER" or "USER_TO_TRIP", omit for "All")
 - **Rating Filter:** All, 5 Stars, 4 Stars, 3 Stars, 2 Stars, 1 Star
+  - **API Parameter:** `rating` (values: 1, 2, 3, 4, 5, omit for "All")
+- **Search:** Search in comments
+  - **API Parameter:** `searchTerm`
 - **Sort:** Newest, Oldest, Highest Rating, Lowest Rating
+  - **API Parameters:**
+    - `sortBy`: Sort field (optional)
+    - `sortOrder`: "asc" or "desc" (optional)
+- **Pagination:**
+  - **API Parameters:** `page`, `limit`
+  - Use `meta.page`, `meta.limit`, `meta.total` from response
 - **Clear Filters Button:** "Clear All"
 
 **Review Card** (Each Review):
@@ -2971,23 +4664,29 @@ Same as login page (split or centered)
 - **Label:** "Review Type \*"
 - **Options:**
   - **Review a User:** "Write a review about a travel companion"
+    - **Backend Value:** "USER_TO_USER"
   - **Review a Trip:** "Write a review about a travel plan"
+    - **Backend Value:** "USER_TO_TRIP"
 - **Default:** Review a User
-- **Validation:** Required
+- **Validation:** Required, must be "USER_TO_USER" or "USER_TO_TRIP"
 - **Error:** "Please select a review type"
+- **Backend Field:** `source` (required enum)
 
 **Reviewed User/Plan** (required, based on source):
 
 - **Type:** select dropdown
 - **Label:**
-  - "Select User \*" (if reviewing user)
-  - "Select Trip \*" (if reviewing trip)
+  - "Select User \*" (if reviewing user, source: "USER_TO_USER")
+  - "Select Trip \*" (if reviewing trip, source: "USER_TO_TRIP")
 - **Options:**
   - For User: Shows users you've traveled with (with avatars)
   - For Trip: Shows trips you've been part of (with trip details)
 - **Placeholder:** "Select [user/trip] to review"
 - **Validation:** Required
 - **Error:** "Please select a [user/trip] to review"
+- **Backend Fields:**
+  - If `source: "USER_TO_USER"`: `reviewedUserId` (UUID, required)
+  - If `source: "USER_TO_TRIP"`: `planId` (UUID, required)
 
 **Comment** (optional):
 
@@ -3004,7 +4703,36 @@ Same as login page (split or centered)
 - **Cancel Button:** Close modal without saving
 - **Submit Button:** "Submit Review"
 - **Loading State:** Show spinner during submission
-- **Success:** Close modal, refresh review list, show success toast
+- **API Call:** `POST /api/v1/reviews` with `credentials: 'include'`
+- **Request Body:** Convert form data to API format:
+```json
+{
+  "rating": 5,
+  "comment": "Great travel companion!",
+  "source": "USER_TO_USER",
+  "reviewedUserId": "userId"
+}
+```
+OR
+```json
+{
+  "rating": 5,
+  "comment": "Amazing trip!",
+  "source": "USER_TO_TRIP",
+  "planId": "planId"
+}
+```
+- **Validation Notes:**
+  - `rating`: Required, integer 1-5
+  - `source`: Required, "USER_TO_USER" or "USER_TO_TRIP"
+  - `comment`: Optional, string
+  - If `source: "USER_TO_USER"`: `reviewedUserId` required
+  - If `source: "USER_TO_TRIP"`: `planId` required
+- **Success:** 
+  - Close modal
+  - Refresh review list using `GET /api/v1/reviews`
+  - Show success toast: "Review submitted successfully"
+- **Error:** Display error from `errorMessages` array
 
 **Styling:**
 
@@ -3019,9 +4747,17 @@ Same as login page (split or centered)
 
 **Statistics Section:**
 
+- **API Integration:**
+  - **Endpoint:** `GET /api/v1/reviews/statistics?userId=:currentUserId`
+  - **Authentication:** Required
+  - **Query Parameters:**
+    - `userId`: Filter by user ID (UUID, optional, use current user ID for "About Me")
+    - `planId`: Filter by plan ID (UUID, optional, for "About My Trips")
+  - **Response:** Returns aggregated statistics (average rating, total reviews, rating distribution)
 - **Average Rating:**
   - Large star display (e.g., 4.5/5)
   - "Based on X reviews"
+  - **Data Source:** `averageRating` and `totalReviews` from statistics response
 - **Rating Distribution:**
   - Bar chart or list showing:
     - 5 stars: X reviews (XX%)
@@ -3029,7 +4765,9 @@ Same as login page (split or centered)
     - 3 stars: X reviews (XX%)
     - 2 stars: X reviews (XX%)
     - 1 star: X reviews (XX%)
+  - **Data Source:** `ratingDistribution` from statistics response
 - **Total Reviews Count:** "X total reviews"
+  - **Data Source:** `totalReviews` from statistics response
 
 **Styling:**
 
@@ -3046,6 +4784,20 @@ Same as login page (split or centered)
 - Same form as Create Review
 - Pre-filled with existing review data
 - **Title:** "Edit Review"
+- **API Call:** `PATCH /api/v1/reviews/:reviewId` with `credentials: 'include'`
+- **Request Body:** All fields optional
+```json
+{
+  "rating": 4,
+  "comment": "Good, but could improve communication."
+}
+```
+- **Success:** 
+  - Update review in list
+  - Show "(edited)" indicator
+  - Set `isEdited: true` on review object
+  - Show success toast: "Review updated successfully"
+- **Error:** Display error from `errorMessages` array
 - **Actions:**
   - Cancel → Close without saving
   - Save Changes → Update review
@@ -3067,7 +4819,11 @@ Same as login page (split or centered)
   - Cancel → Close modal
   - Delete → Confirm deletion
 - **Loading State:** Show spinner during deletion
-- **Success:** Remove from list, show success toast
+- **API Call:** `DELETE /api/v1/reviews/:reviewId` with `credentials: 'include'`
+- **Success:** 
+  - Remove from list
+  - Show success toast: "Review deleted successfully"
+- **Error:** Display error message
 
 **Styling:**
 
@@ -3106,6 +4862,81 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Get Current Subscription Status:**
+- **Endpoint:** `GET /api/v1/subscriptions/status`
+- **Authentication:** Required
+- **Response:** Returns user's active subscription status with plan, validity, status, etc.
+- **Use Case:** Display current subscription card
+
+**Get Single Subscription:**
+- **Endpoint:** `GET /api/v1/subscriptions/:subscriptionId`
+- **Authentication:** Required
+- **Response:** Returns subscription details by ID
+
+**Create Subscription:**
+- **Endpoint:** `POST /api/v1/subscriptions`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "planType": "MONTHLY"
+}
+```
+- **Validation Notes:**
+  - `planType`: Required, must be "MONTHLY" or "YEARLY"
+- **Response:** Returns Stripe checkout session URL
+- **Flow:** 
+  1. Create subscription → Get Stripe session URL
+  2. Redirect user to Stripe Checkout
+  3. User completes payment on Stripe
+  4. Stripe webhook updates subscription status
+  5. User redirected back to subscriptions page
+
+**Update Subscription:**
+- **Endpoint:** `PATCH /api/v1/subscriptions/:subscriptionId`
+- **Authentication:** Required
+- **Request Body:**
+```json
+{
+  "cancelAtPeriodEnd": true
+}
+```
+- **Validation Notes:**
+  - `cancelAtPeriodEnd`: Optional boolean
+  - If `true`: Subscription will cancel at end of current billing period
+  - If `false`: Cancel immediately
+- **Use Case:** Cancel at period end or reactivate subscription
+
+**Cancel Subscription:**
+- **Endpoint:** `DELETE /api/v1/subscriptions/:subscriptionId`
+- **Authentication:** Required
+- **Success:** Cancels (ends) active subscription immediately
+- **Note:** Use Update Subscription with `cancelAtPeriodEnd: true` to cancel at period end
+
+**Subscription History (Admin):**
+- **Endpoint:** `GET /api/v1/subscriptions`
+- **Authentication:** Required (ADMIN role only)
+- **Query Parameters:**
+  - `status`: Filter by status - "ACTIVE", "PAST_DUE", "CANCELLED", "EXPIRED" (optional)
+  - `planType`: Filter by plan type - "MONTHLY" or "YEARLY" (optional)
+  - `planName`: Filter by plan name (optional)
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+  - `sortBy`: Sort field (optional)
+  - `sortOrder`: "asc" or "desc" (optional)
+- **Response:** Returns paginated list of all subscriptions
+
+**Stripe Webhook:**
+- **Endpoint:** `POST /api/v1/subscriptions/webhook`
+- **Authentication:** Not required (Stripe calls this)
+- **Headers:** `stripe-signature` (required for verification)
+- **Body:** Raw JSON from Stripe
+- **Note:** This is called by Stripe, not by frontend. Frontend doesn't need to implement this.
+
+---
+
 #### Current Subscription Card
 
 **Layout:** Large card at top
@@ -3138,8 +4969,13 @@ Same as login page (split or centered)
 **Actions:**
 
 - **Manage Subscription Button:** "Manage Subscription" → Opens management modal
+  - **API:** `GET /api/v1/subscriptions/:subscriptionId` to fetch details
+  - **API:** `PATCH /api/v1/subscriptions/:subscriptionId` to update settings
 - **Cancel Subscription Button:** "Cancel Subscription" → Opens cancellation modal
+  - **API:** `PATCH /api/v1/subscriptions/:subscriptionId` with `{ cancelAtPeriodEnd: true }` (cancel at period end)
+  - **API:** `DELETE /api/v1/subscriptions/:subscriptionId` (cancel immediately)
 - **Upgrade/Renew Button:** "Upgrade Plan" or "Renew Subscription" (if inactive)
+  - **API:** `POST /api/v1/subscriptions` with `{ planType: "MONTHLY" | "YEARLY" }`
 
 **Styling:**
 
@@ -3209,24 +5045,34 @@ Same as login page (split or centered)
 
 1. **Click Subscribe Button:**
    - Show loading state
-   - Create checkout session via API
-   - Redirect to Stripe Checkout
+   - **API Call:** `POST /api/v1/subscriptions` with `credentials: 'include'`
+   - **Request Body:**
+   ```json
+   {
+     "planType": "MONTHLY"
+   }
+   ```
+   - **Response:** Returns Stripe checkout session object with `url` or `sessionId`
+   - **Success:** Redirect user to Stripe Checkout URL
+   - **Error:** Display error from `errorMessages` array
 
 2. **Stripe Checkout:**
-   - User enters payment details
+   - User enters payment details on Stripe's secure page
    - Stripe handles payment processing
-   - Secure payment form
+   - User completes payment
 
 3. **Success Redirect:**
-   - Redirect back to subscriptions page
+   - Stripe redirects back to success URL (configured in backend)
    - Show success message: "Subscription activated successfully!"
-   - Update subscription status
-   - Refresh subscription card
+   - **API:** `GET /api/v1/subscriptions/status` to fetch updated subscription
+   - Update subscription card with new status
+   - Refresh subscription details
 
 4. **Error Handling:**
    - Display error message if payment fails
-   - Allow user to retry
+   - Allow user to retry subscription creation
    - Show support contact if needed
+   - **Note:** Stripe webhook handles subscription status updates automatically
 
 **Styling:**
 
@@ -3249,12 +5095,18 @@ Same as login page (split or centered)
 
 - **Cancel Subscription:**
   - "Cancel at period end" (recommended)
+    - **API:** `PATCH /api/v1/subscriptions/:subscriptionId` with `{ cancelAtPeriodEnd: true }`
+    - Subscription continues until end of billing period
   - "Cancel immediately"
-  - Confirmation required
+    - **API:** `DELETE /api/v1/subscriptions/:subscriptionId`
+    - Subscription ends immediately
+  - Confirmation required for both options
 - **Update Payment Method:**
-  - Link to Stripe customer portal (optional)
+  - Link to Stripe customer portal (optional, if implemented)
+  - Or redirect to Stripe billing portal
 - **View Billing History:**
-  - Link to payments page
+  - Link to payments page (`/dashboard/payments`)
+  - **API:** `GET /api/v1/payments/my-payments`
 
 **Styling:**
 
@@ -3298,13 +5150,23 @@ Same as login page (split or centered)
 
 - **Keep Subscription:** Close modal
 - **Cancel Subscription:** Confirm cancellation
+  - **API Call (Cancel at Period End):** `PATCH /api/v1/subscriptions/:subscriptionId` with `credentials: 'include'`
+  - **Request Body:**
+  ```json
+  {
+    "cancelAtPeriodEnd": true
+  }
+  ```
+  - **API Call (Cancel Immediately):** `DELETE /api/v1/subscriptions/:subscriptionId` with `credentials: 'include'`
 - **Loading State:** Show spinner during cancellation
 
 **Success:**
 
-- Show success message
-- Update subscription status
+- Show success message: "Subscription will be cancelled at the end of billing period" or "Subscription cancelled"
+- **API:** `GET /api/v1/subscriptions/status` to fetch updated status
+- Update subscription status in UI
 - Send confirmation email (handled by backend)
+- **Error:** Display error message
 
 **Styling:**
 
@@ -3320,11 +5182,22 @@ Same as login page (split or centered)
 
 **History List:**
 
+- **API Integration (Admin Only):**
+  - **Endpoint:** `GET /api/v1/subscriptions?page=1&limit=10&status=ACTIVE&planType=MONTHLY`
+  - **Authentication:** Required (ADMIN role only)
+  - **Query Parameters:**
+    - `status`: Filter by status (ACTIVE, PAST_DUE, CANCELLED, EXPIRED)
+    - `planType`: Filter by plan type (MONTHLY, YEARLY)
+    - `planName`: Filter by plan name
+    - `page`, `limit`: Pagination
+    - `sortBy`, `sortOrder`: Sorting
+  - **Response:** Returns paginated list of subscriptions
 - **Past Subscriptions:**
   - Plan type and name
   - Status (Active, Cancelled, Expired)
   - Dates (started, ended)
   - Payment history link
+  - **View Details:** `GET /api/v1/subscriptions/:subscriptionId`
 
 **Styling:**
 
@@ -3366,6 +5239,60 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Get My Payments:**
+- **Endpoint:** `GET /api/v1/payments/my-payments`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `status`: Filter by status - "SUCCEEDED", "PENDING", "REFUNDED", "FAILED" (optional)
+  - `subscriptionId`: Filter by subscription ID (UUID, optional)
+  - `currency`: Filter by currency code (optional)
+  - `startDate`: Filter by start date (optional, YYYY-MM-DD)
+  - `endDate`: Filter by end date (optional, YYYY-MM-DD)
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+  - `sortBy`: Sort field (optional)
+  - `sortOrder`: "asc" or "desc" (optional)
+- **Response:** Returns paginated list of user's payments
+
+**Get Single Payment:**
+- **Endpoint:** `GET /api/v1/payments/:paymentId`
+- **Authentication:** Required
+- **Response:** Returns payment details by ID
+
+**Get Payment Summary:**
+- **Endpoint:** `GET /api/v1/payments/summary?subscriptionId=:subscriptionId`
+- **Authentication:** Required
+- **Query Parameter:** `subscriptionId` (optional, UUID)
+- **Response:** Returns payment summary statistics (total spent, this month, etc.)
+- **Use Case:** Display summary cards
+
+**Get All Payments (Admin):**
+- **Endpoint:** `GET /api/v1/payments`
+- **Authentication:** Required (ADMIN role only)
+- **Query Parameters:**
+  - `status`: Filter by status (SUCCEEDED, PENDING, REFUNDED, FAILED)
+  - `userId`: Filter by user ID (UUID)
+  - `subscriptionId`: Filter by subscription ID (UUID)
+  - `currency`: Filter by currency code
+  - `startDate`, `endDate`: Date range filter
+  - `page`, `limit`: Pagination
+  - `sortBy`, `sortOrder`: Sorting
+- **Response:** Returns paginated list of all payments in system
+
+**Get Payment Statistics (Admin):**
+- **Endpoint:** `GET /api/v1/payments/statistics?startDate=2025-01-01&endDate=2025-12-31`
+- **Authentication:** Required (ADMIN role only)
+- **Query Parameters:**
+  - `startDate`: Filter by start date (optional)
+  - `endDate`: Filter by end date (optional)
+  - `subscriptionId`: Filter by subscription ID (optional, UUID)
+  - `currency`: Filter by currency code (optional)
+- **Response:** Returns payment statistics (revenue, counts, etc.)
+
+---
+
 #### Payment Summary Cards
 
 **Layout:** Summary cards at top (3 cards)
@@ -3377,6 +5304,7 @@ Same as login page (split or centered)
 - **Icon:** Dollar icon
 - **Color:** Blue
 - **Period:** All time
+- **API:** `GET /api/v1/payments/summary` → Use `totalSpent` from response
 
 **Card 2: This Month**
 
@@ -3385,6 +5313,7 @@ Same as login page (split or centered)
 - **Icon:** Calendar icon
 - **Color:** Green
 - **Period:** Current month
+- **API:** `GET /api/v1/payments/summary` → Use `thisMonth` from response
 
 **Card 3: Active Subscriptions**
 
@@ -3393,6 +5322,7 @@ Same as login page (split or centered)
 - **Icon:** Credit Card icon
 - **Color:** Purple
 - **Link:** Links to subscriptions page
+- **API:** `GET /api/v1/subscriptions/status` → Check if active subscription exists
 
 **Styling:**
 
@@ -3408,19 +5338,31 @@ Same as login page (split or centered)
 **Filters:**
 
 - **Status Filter:** All, Succeeded, Failed, Pending, Refunded
+  - **API Parameter:** `status` (values: "SUCCEEDED", "PENDING", "REFUNDED", "FAILED", omit for "All")
 - **Date Range:** Start date - End date picker
-- **Type Filter:** All, Subscription, One-time
+  - **API Parameters:** `startDate`, `endDate` (YYYY-MM-DD format)
+- **Subscription Filter:** Filter by subscription (optional)
+  - **API Parameter:** `subscriptionId` (UUID)
+- **Currency Filter:** Filter by currency (optional)
+  - **API Parameter:** `currency` (currency code)
 - **Clear Filters Button:** "Clear All"
 
 **Sort Options:**
 
 - **Dropdown:** Date (newest first), Date (oldest first), Amount (high to low), Amount (low to high)
 - **Default:** Date (newest first)
+- **API Parameters:**
+  - `sortBy`: Sort field (optional)
+  - `sortOrder`: "asc" or "desc" (optional)
+- **Pagination:**
+  - **API Parameters:** `page`, `limit`
+  - Use `meta.page`, `meta.limit`, `meta.total` from response
 
 **View Options:**
 
 - **List View:** Default
-- **Grouped by Date:** Optional grouping
+- **Grouped by Date:** Optional grouping (client-side)
+- **API Call:** `GET /api/v1/payments/my-payments` with query parameters
 
 ---
 
@@ -3454,7 +5396,9 @@ Same as login page (split or centered)
   - Opens receipt in new tab
 - **Actions:**
   - View Details (eye icon) → Payment details modal
+    - **API:** `GET /api/v1/payments/:paymentId` to fetch full payment details
   - Download Receipt (download icon) → Download receipt
+    - **Note:** Receipt URL from payment object (if available from Stripe)
 
 **Styling:**
 
@@ -3512,6 +5456,18 @@ Same as login page (split or centered)
 - **Payment Status Distribution:** Pie chart (Succeeded, Failed, etc.)
 - **Payment Methods:** Breakdown by payment method
 
+**API Integration (Admin Only):**
+
+- **Endpoint:** `GET /api/v1/payments/statistics?startDate=2025-01-01&endDate=2025-12-31`
+- **Authentication:** Required (ADMIN role only)
+- **Query Parameters:**
+  - `startDate`: Filter by start date (optional)
+  - `endDate`: Filter by end date (optional)
+  - `subscriptionId`: Filter by subscription ID (optional)
+  - `currency`: Filter by currency code (optional)
+- **Response:** Returns payment statistics (revenue, counts, breakdowns)
+- **Use Case:** Display charts and graphs for admin dashboard
+
 **Styling:**
 
 - Visual charts
@@ -3545,6 +5501,48 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Get Profile:**
+- **Endpoint:** `GET /api/v1/users/me`
+- **Authentication:** Required
+- **Response:** Returns current user's profile data
+
+**Update Profile:**
+- **Endpoint:** `PATCH /api/v1/users/me`
+- **Authentication:** Required
+- **Request Body:** All fields optional
+```json
+{
+  "fullName": "New Name",
+  "bio": "A short bio about yourself.",
+  "location": "Dhaka, Bangladesh",
+  "interests": ["Travel", "Hiking"],
+  "visitedCountries": ["BD", "IN"]
+}
+```
+
+**Update Profile Photo:**
+- **Endpoint:** `PATCH /api/v1/users/me/photo`
+- **Authentication:** Required
+- **Content-Type:** `multipart/form-data`
+- **Form Data:**
+  - `photo`: File (image file)
+- **Accepted Formats:** JPEG, PNG, WebP
+- **Max Size:** 5MB
+
+**Get My Travel Plans:**
+- **Endpoint:** `GET /api/v1/users/me/travel-plans`
+- **Authentication:** Required
+- **Query Parameters:** `page`, `limit`, `sortBy`, `sortOrder`, `searchTerm`, `travelType`, `visibility` (optional)
+
+**Get My Reviews:**
+- **Endpoint:** `GET /api/v1/users/me/reviews`
+- **Authentication:** Required
+- **Query Parameters:** `page`, `limit`, `sortBy`, `sortOrder`, `rating`, `source`, `isEdited`, `searchTerm` (optional)
+
+---
+
 #### Tabs Navigation
 
 **Two Tabs:**
@@ -3573,19 +5571,27 @@ Same as login page (split or centered)
   - Large circular avatar
   - Current profile image or placeholder
   - "Change Photo" button overlay on hover
+  - **API:** Fetch current photo from `GET /api/v1/users/me` response (`profileImage` field)
 - **Upload New Photo:**
   - **Button:** "Upload New Photo" or "Change Photo"
   - **File Input:** Hidden file input
   - **Accept:** image/\* (JPEG, PNG, WebP)
   - **Max Size:** 5MB
-  - **Preview:** Show preview after selection
-  - **Crop Tool:** Optional image cropper
+  - **Preview:** Show preview after selection (client-side)
+  - **Crop Tool:** Optional image cropper (client-side)
   - **Remove Photo Button:** "Remove Photo" (if photo exists)
+    - **Note:** Backend doesn't have a remove photo endpoint. To remove, upload a new photo or leave as is.
 - **Upload Progress:** Progress indicator during upload
+- **API Call:** `PATCH /api/v1/users/me/photo` with `multipart/form-data`
+  - **Form Data:** `photo` (file field)
+  - **Content-Type:** `multipart/form-data` (set automatically by browser)
+  - **Success:** Returns updated user object with new `profileImage` URL
+  - **Error:** Display error message
 - **Validation:**
-  - File type validation
-  - File size validation
+  - File type validation (client-side): JPEG, PNG, WebP
+  - File size validation (client-side): Max 5MB
   - Error: "Please upload a valid image file (max 5MB)"
+  - Backend validation: File type and size checked on server
 
 **Full Name** (optional):
 
@@ -3654,8 +5660,12 @@ Same as login page (split or centered)
 - **Cancel Button:** Discard changes, reset form
 - **Save Button:** "Update Profile"
 - **Loading State:** Show spinner during submission
-- **Success:** Show success toast, refresh profile data
-- **Error:** Display error message
+- **API Call:** `PATCH /api/v1/users/me` with `credentials: 'include'`
+- **Success:** 
+  - Show success toast: "Profile updated successfully"
+  - Refresh profile data using `GET /api/v1/users/me`
+  - Update UI with new data
+- **Error:** Display error message from `errorMessages` array
 
 **Styling:**
 
@@ -3708,11 +5718,17 @@ Same as login page (split or centered)
 - **Cancel Button:** Clear form, reset
 - **Update Password Button:** "Change Password"
 - **Loading State:** Show spinner during submission
+- **API Call:** 
+  - **Note:** Password change endpoint is not in the current API collection. This feature may need to be implemented in the backend or handled differently.
+  - If endpoint exists: `PATCH /api/v1/users/me/password` or similar
+  - **Request Body:** `{ currentPassword, newPassword }`
 - **Success:**
   - Show success toast: "Password updated successfully"
   - Clear form
-  - Logout user (optional, for security)
-- **Error:** Display error message
+  - Logout user (optional, for security) - redirect to `/login`
+- **Error:** Display error message from `errorMessages` array
+  - "Current password is incorrect"
+  - Password validation errors
 
 **Security Note:**
 
@@ -3802,21 +5818,96 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Get All Notifications:**
+- **Endpoint:** `GET /api/v1/notifications`
+- **Authentication:** Required
+- **Query Parameters:**
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+  - `sortBy`: Sort field (optional, default: "createdAt")
+  - `sortOrder`: "asc" or "desc" (optional, default: "desc")
+  - `type`: NotificationType enum (optional, filter by type)
+  - `isRead`: "true" or "false" (optional, filter by read status)
+  - `searchTerm`: Search in title/message (optional)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Notifications retrieved successfully.",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 50
+  },
+  "data": [
+    {
+      "id": "notificationId",
+      "userId": "userId",
+      "type": "PLAN_UPDATED",
+      "title": "Plan Updated",
+      "message": "Plan 'Spring Trip' was updated",
+      "isRead": false,
+      "relatedId": "planId",
+      "relatedType": "PLAN",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Get Unread Count:**
+- **Endpoint:** `GET /api/v1/notifications/unread-count`
+- **Authentication:** Required
+- **Response:**
+```json
+{
+  "success": true,
+  "message": "Unread count retrieved successfully.",
+  "data": {
+    "count": 5
+  }
+}
+```
+- **Use Case:** Display badge count in sidebar/navbar
+
+**Mark Notification as Read:**
+- **Endpoint:** `PATCH /api/v1/notifications/:notificationId/read`
+- **Authentication:** Required
+- **Success:** Returns updated notification with `isRead: true`
+- **Error:** "Notification not found"
+
+**Mark All Notifications Read:**
+- **Endpoint:** `PATCH /api/v1/notifications/read-all`
+- **Authentication:** Required
+- **No body or params needed**
+- **Success:** Returns success message
+- **Use Case:** Mark all notifications as read at once
+
+---
+
 #### Header Actions
 
 **Actions Bar:**
 
 - **Mark All as Read Button:** "Mark All as Read"
   - Only shown if there are unread notifications
-  - Confirmation: "Mark all notifications as read?"
-  - Success: Update all notifications, refresh list
+  - **API:** `PATCH /api/v1/notifications/read-all` with `credentials: 'include'`
+  - Confirmation: "Mark all notifications as read?" (optional)
+  - Success: Refresh notification list and unread count
+  - Error: Display error message
 - **Filter Dropdown:**
   - **Options:** All, Unread, Read
   - **Default:** All
+  - **API Parameter:** `isRead` (values: "true" or "false", omit for "All")
   - **Badge:** Count of unread notifications
+  - **API:** `GET /api/v1/notifications/unread-count` to fetch count
 - **Notification Type Filter:**
   - **Dropdown:** All Types, Plan Updates, Messages, Invitations, Meetups, Expenses, Subscriptions, Payments
   - **Default:** All Types
+  - **API Parameter:** `type` (NotificationType enum value, omit for "All Types")
 
 **Styling:**
 
@@ -3831,8 +5922,20 @@ Same as login page (split or centered)
 **Layout:**
 
 - **Chronological Order:** Newest first (default)
-- **Grouping:** Optional grouping by date (Today, Yesterday, This Week, Older)
-- **Pagination:** Load more or infinite scroll
+- **API Call:** `GET /api/v1/notifications?page=1&limit=10&sortBy=createdAt&sortOrder=desc` with `credentials: 'include'`
+- **Query Parameters:**
+  - `page`: Current page number
+  - `limit`: Items per page (10, 20, 50, etc.)
+  - `sortBy`: "createdAt" (default)
+  - `sortOrder`: "desc" (default, newest first)
+  - `type`: Filter by notification type (optional)
+  - `isRead`: Filter by read status (optional, "true" or "false")
+  - `searchTerm`: Search in title/message (optional)
+- **Pagination:** 
+  - Use `meta.page`, `meta.limit`, `meta.total` from response
+  - Show page numbers or "Load More" button
+  - Update `page` parameter for next page
+- **Grouping:** Optional grouping by date (Today, Yesterday, This Week, Older) - client-side
 - **Empty States:** Different messages for All/Unread/Read filters
 
 **Notification Item** (Each Notification):
@@ -3852,8 +5955,13 @@ Same as login page (split or centered)
   - Hover effect
 - **Actions:**
   - **Mark as Read** (if unread): Checkmark icon → Mark as read
+    - **API:** `PATCH /api/v1/notifications/:notificationId/read` with `credentials: 'include'`
+    - **Success:** Update notification in list (set `isRead: true`), update unread count
+    - **Error:** Display error message
   - **Delete:** Trash icon → Delete notification (optional)
+    - **Note:** Delete endpoint not available in current API. Can be implemented if needed.
   - **Action Button:** Context-specific action (e.g., "View Plan", "Reply")
+    - Navigate to related item using `relatedId` and `relatedType` from notification
 
 **Styling:**
 
@@ -3949,28 +6057,41 @@ Same as login page (split or centered)
 **Mark as Read:**
 
 - **Action:** Click "Mark as Read" button or click notification
-- **Update:** Remove unread indicator, update count
-- **API:** PATCH `/api/v1/notifications/:id/read`
+- **API Call:** `PATCH /api/v1/notifications/:notificationId/read` with `credentials: 'include'`
+- **Success:** 
+  - Update notification in list (set `isRead: true`)
+  - Update unread count badge using `GET /api/v1/notifications/unread-count`
+  - Remove unread indicator (blue dot)
+- **Error:** Display error message
 
 **Mark All as Read:**
 
 - **Action:** Click "Mark All as Read" button
-- **Confirmation:** Optional confirmation modal
-- **Update:** Mark all notifications as read, refresh list
-- **API:** PATCH `/api/v1/notifications/read-all`
+- **API Call:** `PATCH /api/v1/notifications/read-all` with `credentials: 'include'`
+- **Confirmation:** Optional confirmation modal ("Mark all notifications as read?")
+- **Success:** 
+  - Refresh notification list (all should show `isRead: true`)
+  - Update unread count badge (should be 0)
+  - Show success toast: "All notifications marked as read"
+- **Error:** Display error message
 
 **Delete Notification:**
 
 - **Action:** Click delete icon
-- **Confirmation:** "Delete this notification?"
-- **Update:** Remove from list
-- **API:** DELETE `/api/v1/notifications/:id` (if implemented)
+- **Note:** Delete endpoint is not available in current API. This feature can be implemented if needed.
+- **Alternative:** Mark as read to hide from unread list
 
 **Navigate to Related Item:**
 
 - **Action:** Click notification
-- **Behavior:** Navigate to related page (plan, chat, etc.)
-- **Auto-mark as Read:** Mark as read when clicked
+- **Behavior:** Navigate to related page using `relatedId` and `relatedType` from notification
+  - `relatedType: "PLAN"` → Navigate to `/dashboard/travel-plans/:relatedId`
+  - `relatedType: "MEETUP"` → Navigate to meetup details
+  - `relatedType: "EXPENSE"` → Navigate to expense details
+  - `relatedType: "CHAT"` → Navigate to chat thread
+- **Auto-mark as Read:** 
+  - Optionally mark as read when clicked
+  - **API:** `PATCH /api/v1/notifications/:notificationId/read`
 
 **Styling:**
 
@@ -3994,11 +6115,25 @@ Same as login page (split or centered)
 - **Count:** Number of unread notifications
 - **Animation:** Pulse animation for new notifications (optional)
 
+**API Integration:**
+
+- **Fetch Count:** `GET /api/v1/notifications/unread-count` with `credentials: 'include'`
+- **Response:** `{ success: true, data: { count: 5 } }`
+- **Update Frequency:**
+  - On page load
+  - After marking notification as read
+  - After marking all as read
+  - Polling: Every 30-60 seconds (optional)
+  - WebSocket: Real-time updates (if implemented)
+
 **Real-time Updates:**
 
 - Update badge count when new notifications arrive
 - Update when notifications are marked as read
 - WebSocket or polling for real-time updates
+- **Implementation:** 
+  - Polling: Set interval to fetch unread count
+  - WebSocket: Subscribe to notification events (if available)
 
 **Styling:**
 
@@ -4047,6 +6182,90 @@ Same as login page (split or centered)
 
 ---
 
+#### API Integration
+
+**Get Members of a Plan:**
+- **Endpoint:** `GET /api/v1/trip-members/:planId`
+- **Authentication:** Required
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Members retrieved successfully.",
+  "data": [
+    {
+      "id": "tripMemberId",
+      "planId": "planId",
+      "userId": "userId",
+      "role": "OWNER",
+      "status": "JOINED",
+      "addedBy": "userId",
+      "joinedAt": "2025-01-01T00:00:00.000Z",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "user": {
+        "id": "userId",
+        "fullName": "User Name",
+        "email": "user@example.com",
+        "profileImage": "url"
+      }
+    }
+  ]
+}
+```
+
+**Add Member to Plan:**
+- **Endpoint:** `POST /api/v1/trip-members/:planId/add`
+- **Authentication:** Required (plan manager/admin only)
+- **Request Body:**
+```json
+{
+  "email": "member@example.com",
+  "role": "VIEWER"
+}
+```
+- **Validation Notes:**
+  - `email`: Required, valid email format
+  - `role`: Required, must be one of: OWNER, ADMIN, EDITOR, VIEWER
+  - OWNER role cannot be assigned (automatically assigned when creating plan)
+  - Typically use VIEWER or EDITOR for regular members
+- **Success Response:** Returns created TripMember object
+- **Error Messages:**
+  - "User not found" (if email doesn't exist)
+  - "User is already a member of this plan"
+  - "Invalid role. Must be OWNER, ADMIN, EDITOR, or VIEWER."
+
+**Update Member Role:**
+- **Endpoint:** `PATCH /api/v1/trip-members/:planId/update-role`
+- **Authentication:** Required (plan manager/admin only)
+- **Request Body:**
+```json
+{
+  "userId": "userId",
+  "role": "ADMIN"
+}
+```
+- **Validation Notes:**
+  - `userId`: Required, must be a member of the plan
+  - `role`: Required, must be one of: OWNER, ADMIN, EDITOR, VIEWER
+  - Cannot change OWNER role
+  - planId is in URL path, userId is in body
+- **Success Response:** Returns updated TripMember object
+- **Error Messages:**
+  - "Trip member not found" (if userId is not a member)
+  - "Invalid role. Must be OWNER, ADMIN, EDITOR, or VIEWER."
+
+**Remove Member from Plan:**
+- **Endpoint:** `DELETE /api/v1/trip-members/:memberId`
+- **Authentication:** Required (plan manager/admin only)
+- **Important:** Uses `memberId` (TripMember ID), NOT `userId`
+- **Success Response:** Returns success message
+- **Error Messages:**
+  - "Trip member not found"
+  - "Cannot remove the plan owner"
+
+---
+
 #### Member List
 
 **Section Title:** "Plan Members"
@@ -4073,10 +6292,18 @@ Same as login page (split or centered)
     - Select new role (ADMIN, EDITOR, VIEWER)
     - Cannot change OWNER role
     - Confirmation: "Change [Name]'s role to [Role]?"
+    - **API Call:** `PATCH /api/v1/trip-members/:planId/update-role`
+    - **Request Body:** `{ "userId": "userId", "role": "ADMIN" }`
+    - **Success:** Show toast, refresh member list
+    - **Error:** Display error from `errorMessages` array
   - **Remove Member Button:**
     - Trash icon
     - Confirmation: "Remove [Name] from this plan?"
     - Warning: "This action cannot be undone"
+    - **API Call:** `DELETE /api/v1/trip-members/:memberId`
+    - **Important:** Use `memberId` (TripMember ID) from the member object, NOT `userId`
+    - **Success:** Show toast, refresh member list
+    - **Error:** Display error message
 
 **Styling:**
 
@@ -4102,6 +6329,7 @@ Same as login page (split or centered)
 - **Validation:** Required, valid email format
 - **Error:** "Please enter a valid email address"
 - **Duplicate Check:** "This user is already a member" (on blur or submit)
+- **Backend Validation:** Email must exist in system (user must be registered)
 
 **Role** (required):
 
@@ -4112,19 +6340,31 @@ Same as login page (split or centered)
   - **EDITOR:** "Editor - Can edit plan and add content"
   - **VIEWER:** "Viewer - Can only view plan"
 - **Default:** VIEWER
-- **Validation:** Required
-- **Error:** "Please select a role"
+- **Validation:** Required, must be one of: OWNER, ADMIN, EDITOR, VIEWER
+- **Error:** "Invalid role. Must be OWNER, ADMIN, EDITOR, or VIEWER."
 - **Help Text:** Descriptions for each role
+- **Note:** OWNER role cannot be assigned (automatically assigned when creating plan)
 
 **Invite Button:**
 
-- **Text:** "Send Invitation"
+- **Text:** "Add Member" or "Send Invitation"
 - **Loading State:** Show spinner during submission
+- **API Call:** `POST /api/v1/trip-members/:planId/add` with `credentials: 'include'`
+- **Request Body:**
+```json
+{
+  "email": "member@example.com",
+  "role": "VIEWER"
+}
+```
 - **Success:**
-  - Show success toast: "Invitation sent to [email]"
+  - Show success toast: "Member added successfully" or "Invitation sent to [email]"
   - Clear form
-  - Refresh pending invitations list
-- **Error:** Display error message
+  - Refresh member list using `GET /api/v1/trip-members/:planId`
+- **Error:** Display error message from `errorMessages` array
+  - "User not found" (if email doesn't exist in system)
+  - "User is already a member of this plan"
+  - "Invalid role. Must be OWNER, ADMIN, EDITOR, or VIEWER."
 
 **Styling:**
 
