@@ -84,24 +84,24 @@ const addMember = (authUser, payload) => __awaiter(void 0, void 0, void 0, funct
     }
     // Check permission to invite
     yield assertTripMemberPermission(authUser, payload.planId, "canInvite");
+    // Find the user by email
+    const targetUser = yield prisma_1.prisma.user.findUnique({
+        where: { email: payload.email }
+    });
+    if (!targetUser) {
+        throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "User with this email not found.");
+    }
     // Check if user is already a member
     const existingMember = yield prisma_1.prisma.tripMember.findUnique({
         where: {
             planId_userId: {
                 planId: payload.planId,
-                userId: payload.userId
+                userId: targetUser.id
             }
         }
     });
     if (existingMember) {
         throw new ApiError_1.default(http_status_1.default.CONFLICT, "User is already a member of this plan.");
-    }
-    // Validate that target user exists
-    const targetUser = yield prisma_1.prisma.user.findUnique({
-        where: { id: payload.userId }
-    });
-    if (!targetUser) {
-        throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Target user not found.");
     }
     // Cannot add OWNER role (only created during plan creation)
     if (payload.role === client_1.TripRole.OWNER) {
@@ -110,7 +110,7 @@ const addMember = (authUser, payload) => __awaiter(void 0, void 0, void 0, funct
     const result = yield prisma_1.prisma.tripMember.create({
         data: {
             planId: payload.planId,
-            userId: payload.userId,
+            userId: targetUser.id,
             role: payload.role,
             status: client_1.TripStatus.JOINED,
             addedBy: authUser.userId
@@ -176,10 +176,15 @@ const getMembers = (authUser, planId) => __awaiter(void 0, void 0, void 0, funct
     });
     return members;
 });
-const updateMemberRole = (authUser, memberId, payload) => __awaiter(void 0, void 0, void 0, function* () {
-    // Get the member record
+const updateMemberRole = (authUser, payload) => __awaiter(void 0, void 0, void 0, function* () {
+    // Get the member record by planId and userId
     const member = yield prisma_1.prisma.tripMember.findUnique({
-        where: { id: memberId },
+        where: {
+            planId_userId: {
+                planId: payload.planId,
+                userId: payload.userId
+            }
+        },
         include: {
             plan: {
                 select: {
@@ -203,7 +208,7 @@ const updateMemberRole = (authUser, memberId, payload) => __awaiter(void 0, void
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Cannot assign OWNER role. OWNER is set automatically when creating a plan.");
     }
     const updated = yield prisma_1.prisma.tripMember.update({
-        where: { id: memberId },
+        where: { id: member.id },
         data: {
             role: payload.role
         },

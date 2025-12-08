@@ -4,9 +4,11 @@ exports.TripMemberValidation = void 0;
 const zod_1 = require("zod");
 const stringRequired = (message) => zod_1.z.string({ error: () => message });
 const addMemberSchema = zod_1.z.object({
+    params: zod_1.z.object({
+        planId: stringRequired("Plan ID is required.")
+    }),
     body: zod_1.z.object({
-        planId: stringRequired("Plan ID is required."),
-        userId: stringRequired("User ID is required."),
+        email: stringRequired("Email is required.").email("Invalid email format."),
         role: zod_1.z.enum(["OWNER", "ADMIN", "EDITOR", "VIEWER"], {
             error: () => "Invalid role. Must be OWNER, ADMIN, EDITOR, or VIEWER."
         })
@@ -14,9 +16,10 @@ const addMemberSchema = zod_1.z.object({
 });
 const updateRoleSchema = zod_1.z.object({
     params: zod_1.z.object({
-        id: stringRequired("Member ID is required.")
+        planId: stringRequired("Plan ID is required.")
     }),
     body: zod_1.z.object({
+        userId: stringRequired("User ID is required."),
         role: zod_1.z.enum(["OWNER", "ADMIN", "EDITOR", "VIEWER"], {
             error: () => "Invalid role. Must be OWNER, ADMIN, EDITOR, or VIEWER."
         })

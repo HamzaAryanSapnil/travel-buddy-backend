@@ -375,7 +375,7 @@ const sendMessage = (authUser, threadId, payload) => __awaiter(void 0, void 0, v
 const getMessages = (authUser, threadId, query) => __awaiter(void 0, void 0, void 0, function* () {
     // Check read permission
     yield assertThreadPermission(authUser, threadId, "read");
-    const limit = query.limit || chat_constant_1.MESSAGE_PAGE_SIZE;
+    const limit = query.limit ? Number(query.limit) : chat_constant_1.MESSAGE_PAGE_SIZE;
     const cursor = query.cursor ? new Date(query.cursor) : undefined;
     // Build where clause
     const where = {
@@ -390,7 +390,7 @@ const getMessages = (authUser, threadId, query) => __awaiter(void 0, void 0, voi
     // Fetch one extra to determine if there's a next page
     const messages = yield prisma_1.prisma.message.findMany({
         where,
-        take: limit + 1,
+        take: Number(limit) + 1,
         orderBy: {
             createdAt: "desc"
         },

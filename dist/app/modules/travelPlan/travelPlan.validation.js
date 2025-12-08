@@ -7,7 +7,16 @@ const createTravelPlanSchema = zod_1.z.object({
         title: zod_1.z.string().min(1, { message: "Title is required." }),
         destination: zod_1.z.string().min(1, { message: "Destination is required." }),
         origin: zod_1.z.string().optional(),
-        startDate: zod_1.z.string().min(1, { message: "StartDate is required." }),
+        startDate: zod_1.z
+            .string()
+            .min(1, { message: "StartDate is required." })
+            .refine((date) => {
+            const startDate = new Date(date);
+            const now = new Date();
+            return !isNaN(startDate.getTime()) && startDate > now;
+        }, {
+            message: "Start date must be a future date. Past dates are not allowed.",
+        }),
         endDate: zod_1.z.string().min(1, { message: "EndDate is required." }),
         travelType: zod_1.z.enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"]),
         budgetMin: zod_1.z.number().optional(),
@@ -22,7 +31,18 @@ const updateTravelPlanSchema = zod_1.z.object({
         title: zod_1.z.string().optional(),
         destination: zod_1.z.string().optional(),
         origin: zod_1.z.string().optional(),
-        startDate: zod_1.z.string().optional(),
+        startDate: zod_1.z
+            .string()
+            .optional()
+            .refine((date) => {
+            if (!date)
+                return true; // Optional field, skip validation if not provided
+            const startDate = new Date(date);
+            const now = new Date();
+            return !isNaN(startDate.getTime()) && startDate > now;
+        }, {
+            message: "Start date must be a future date. Past dates are not allowed.",
+        }),
         endDate: zod_1.z.string().optional(),
         travelType: zod_1.z
             .enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"])

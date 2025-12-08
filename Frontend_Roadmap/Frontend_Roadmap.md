@@ -396,31 +396,26 @@ travel-buddy-frontend/
 
 #### API Integration
 
-**Endpoint:** `GET /api/v1/travel-plans`
-
-**Authentication:** Required (all users must be authenticated to view plans)
-
-**Query Parameters:**
-- `visibility`: "PUBLIC" | "PRIVATE" | "UNLISTED" (optional, filter by visibility)
-  - Use `visibility=PUBLIC` to show only public plans
-- `travelType`: "SOLO" | "COUPLE" | "FAMILY" | "FRIENDS" | "GROUP" (optional)
-- `searchTerm`: Search in title, destination, description (optional)
-- `sortBy`: "createdAt" | "startDate" | "budgetMin" (optional, default: "createdAt")
-- `sortOrder`: "asc" | "desc" (optional, default: "desc")
-- `page`: Page number (optional, default: 1)
-- `limit`: Items per page (optional, default: 10)
-
-**Note:** 
-- All users (authenticated) can view PUBLIC plans
-- Users can only view their own PRIVATE/UNLISTED plans
-- For public browsing, set `visibility=PUBLIC` in query params
-- Backend automatically filters based on user permissions
-
-**Response Structure:**
+**Get Public Travel Plans:**
+- **Endpoint:** `GET /api/v1/travel-plans/public`
+- **Authentication:** Not required (public endpoint)
+- **Query Parameters:**
+  - `travelType`: "SOLO" | "COUPLE" | "FAMILY" | "FRIENDS" | "GROUP" (optional, filter by travel type)
+  - `searchTerm`: Search in title, destination, origin (optional)
+  - `isFeatured`: "true" | "false" (optional, filter by featured status)
+  - `sortBy`: "createdAt" | "startDate" | "budgetMin" (optional, default: "startDate")
+  - `sortOrder`: "asc" | "desc" (optional, default: "asc")
+  - `page`: Page number (optional, default: 1)
+  - `limit`: Items per page (optional, default: 10)
+- **Note:** 
+  - Returns only PUBLIC plans (visibility: PUBLIC)
+  - No authentication required
+  - Supports pagination, filtering, search, and sorting
+- **Response Structure:**
 ```json
 {
   "success": true,
-  "message": "Travel plans retrieved successfully.",
+  "message": "Public travel plans retrieved successfully.",
   "meta": {
     "page": 1,
     "limit": 10,
@@ -431,6 +426,7 @@ travel-buddy-frontend/
       "id": "uuid",
       "title": "Plan Title",
       "destination": "Location",
+      "origin": "Origin Location",
       "startDate": "2025-09-15T00:00:00.000Z",
       "endDate": "2025-09-21T00:00:00.000Z",
       "travelType": "FRIENDS",
@@ -438,7 +434,17 @@ travel-buddy-frontend/
       "budgetMax": 12000,
       "visibility": "PUBLIC",
       "coverPhoto": "url",
-      "description": "Description text"
+      "description": "Description text",
+      "owner": {
+        "id": "uuid",
+        "fullName": "Owner Name",
+        "profileImage": "url"
+      },
+      "_count": {
+        "itineraryItems": 10,
+        "tripMembers": 5
+      },
+      "totalDays": 7
     }
   ]
 }
@@ -459,12 +465,12 @@ travel-buddy-frontend/
 
 - **Travel Type:** All, Solo, Couple, Family, Friends, Group
   - **API Parameter:** `travelType` (values: "SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP")
-- **Visibility:** All, Public (Private only shown if user is logged in)
-  - **API Parameter:** `visibility` (values: "PUBLIC", "PRIVATE", "UNLISTED")
-  - **Note:** Unauthenticated users should only see PUBLIC plans
-- **Sort By:** Newest, Oldest, Budget (Low to High), Budget (High to Low)
+- **Featured:** All, Featured Only
+  - **API Parameter:** `isFeatured` (values: "true" | "false")
+- **Sort By:** Newest, Oldest, Budget (Low to High), Budget (High to Low), Start Date
   - **API Parameter:** `sortBy` (values: "createdAt", "startDate", "budgetMin")
   - **API Parameter:** `sortOrder` (values: "asc", "desc")
+- **Note:** Only PUBLIC plans are shown (no visibility filter needed)
 
 **Clear Filters Button:**
 
@@ -555,14 +561,15 @@ travel-buddy-frontend/
 
 #### API Integration
 
-**Endpoint:** `GET /api/v1/travel-plans/:id`
-
-**Authentication:** Required
-
-**Note:**
-- PUBLIC plans: Accessible to all authenticated users
-- PRIVATE/UNLISTED plans: Only accessible to plan members (owner, admins, editors, viewers)
-- Returns 404 if plan doesn't exist or user doesn't have access
+**Get Single Travel Plan:**
+- **Endpoint:** `GET /api/v1/travel-plans/:id`
+- **Authentication:** Optional (not required for PUBLIC plans)
+- **Note:**
+  - PUBLIC plans: Accessible without authentication
+  - PRIVATE/UNLISTED plans: Authentication required (must be a plan member)
+  - Returns 404 if plan doesn't exist
+  - Returns 401 if authentication required but not provided
+  - Returns 403 if user doesn't have access
 
 **Response Structure:**
 ```json
@@ -589,23 +596,23 @@ travel-buddy-frontend/
 }
 ```
 
-**Itinerary Preview API:**
+**Itinerary API:**
 - **Endpoint:** `GET /api/v1/itinerary/:planId`
-- **Authentication:** Required (but accessible for PUBLIC plans to all authenticated users)
-- **Query Parameters:** `dayIndex` (optional, filter by day), `page` (optional), `limit` (optional)
-- **Note:** Returns itinerary items for the plan. Accessible if user can view the plan.
+- **Authentication:** Not required for PUBLIC plans
+- **Query Parameters:** `dayIndex` (optional, filter by day)
+- **Note:** Returns complete itinerary items for the plan, grouped by days. All items visible, no limit. Accessible without authentication for PUBLIC plans.
 
 **Media Gallery Preview API:**
 - **Endpoint:** `GET /api/v1/media?planId=:planId`
-- **Authentication:** Required
+- **Authentication:** Not required for PUBLIC plans
 - **Query Parameters:** `type` (optional: "photo" | "video"), `page` (optional), `limit` (optional)
-- **Note:** Returns media files associated with the plan. Accessible if user can view the plan.
+- **Note:** Returns media files associated with the plan. Accessible without authentication for PUBLIC plans.
 
 **Reviews API:**
 - **Endpoint:** `GET /api/v1/reviews?planId=:planId`
-- **Authentication:** Required
+- **Authentication:** Not required for PUBLIC plans
 - **Query Parameters:** `rating` (optional, 1-5), `source` (optional: "USER_TO_TRIP"), `page` (optional), `limit` (optional), `sortBy` (optional), `sortOrder` (optional)
-- **Note:** Returns reviews for the travel plan (source: "USER_TO_TRIP")
+- **Note:** Returns reviews for the travel plan (source: "USER_TO_TRIP"). Accessible without authentication for PUBLIC plans.
 
 ---
 
@@ -622,13 +629,19 @@ travel-buddy-frontend/
 - **Visibility Badge:** Public/Private/Unlisted
 - **Description:** Full description text
 
-**Itinerary Preview:**
+**Full Itinerary:**
 
-- **Section Title:** "Itinerary Preview"
-- **Content:** First 3-5 itinerary items only
-- **Display:** Day numbers, titles, times (if available)
-- **API:** Fetch from `GET /api/v1/itinerary/:planId` with `limit=5`
-- **Button:** "View Full Itinerary" (requires login, redirects to login if not authenticated)
+- **Section Title:** "Full Itinerary"
+- **Content:** Complete itinerary (all days, all items)
+- **Display:** 
+  - All days visible (accordion or expanded)
+  - All items per day
+  - Day numbers + dates (calculated from plan startDate)
+  - Timeline view (optional)
+  - Item format: Time range (if available), Title, Description, Location
+- **API:** Fetch from `GET /api/v1/itinerary/:planId` (no limit parameter, returns all items)
+- **Authentication:** Not required for PUBLIC plans
+- **No "View Full" button needed** (already showing complete itinerary)
 
 **Media Gallery Preview:**
 
@@ -636,54 +649,167 @@ travel-buddy-frontend/
 - **Content:** First 6-9 images in grid
 - **Layout:** 3-column grid
 - **API:** Fetch from `GET /api/v1/media?planId=:planId&type=photo&limit=9`
-- **Button:** "View All Photos" (requires login)
+- **Authentication:** Not required for PUBLIC plans
+- **Button:** "View All Photos" (requires login, redirects to login if not authenticated)
 
 **Reviews Section:**
 
 - **Average Rating:** Star display (e.g., 4.5/5)
 - **Review Count:** "Based on X reviews"
 - **Recent Reviews:** Display 2-3 most recent reviews
-- **Link:** "View All Reviews" → Full reviews page
+- **Authentication:** Not required for PUBLIC plans
+- **Link:** "View All Reviews" (requires login, redirects to login if not authenticated)
 
 ---
 
-#### Private Sections (Visible Only When Logged In)
+#### Action Buttons
 
-**Action Buttons** (if user is NOT a member):
+**For Unauthenticated Users:**
 
-- **"Join This Plan" Button:**
-  - Opens invitation modal or redirects to join flow
-  - Primary button style
+- **"Create Your Plan" Button** (Primary, Large, Prominent)
+  - **Text:** "Create Your Plan"
+  - **Icon:** Plus icon
+  - **Action:** Redirect to `/login?redirect=/dashboard/travel-plans/create`
+  - **After login:** Redirect to create plan page
+  - **Placement:** Centered, below plan details
+  - **Message:** "Start planning your own adventure!"
 
-**Full Access** (if user IS a member):
+**For Authenticated Users:**
 
-- **"Open in Dashboard" Button:**
-  - Links to: `/dashboard/travel-plans/:id`
-  - Primary button style
-- **Full Itinerary Access:** Complete itinerary view
-- **Full Media Gallery:** All photos with lightbox
-- **Chat Access:** Link to chat interface
-- **Expense Tracking:** Link to expenses page
-- **Meetup Details:** Link to meetups page
+- **"Open in Dashboard" Button** (if user is plan member)
+  - **Text:** "Open in Dashboard"
+  - **Links to:** `/dashboard/travel-plans/:id`
+  - **Primary button style**
+- **"Create New Plan" Button** (always available)
+  - **Text:** "Create New Plan"
+  - **Links to:** `/dashboard/travel-plans/create`
+  - **Secondary button style**
 
 ---
 
-#### Login Prompt (For Private Actions When Not Logged In)
+#### Error Handling
 
-**Modal/Toast Message:**
+**401 Unauthorized (PRIVATE/UNLISTED plan, no auth):**
+- Show login prompt modal
+- Message: "Please log in to view this plan"
+- Buttons: "Login" → `/login?redirect=/plans/:id`, "Register" → `/register`, "Cancel"
 
-- **Title:** "Login Required"
-- **Message:** "Please log in to join this plan and access all features"
-- **Buttons:**
-  - "Login" → `/login`
-  - "Register" → `/register`
-  - "Cancel" (closes modal)
+**403 Forbidden (user doesn't have access):**
+- Show message: "You don't have access to view this plan"
+- Option to request access (if feature exists)
+
+**404 Not Found:**
+- Show message: "Travel plan not found"
+- Link back to plans list
+
+---
+
+### 3.3.1 Itinerary Display in Plan Details
+
+#### Full Itinerary View (Public)
+
+**API Integration:**
+
+- **Endpoint:** `GET /api/v1/itinerary/:planId`
+- **Authentication:** Not required for PUBLIC plans
+- **Response:** Grouped by days with all items
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Itinerary items retrieved successfully.",
+  "data": {
+    "days": [
+      {
+        "day": 1,
+        "items": [
+          {
+            "id": "uuid",
+            "planId": "uuid",
+            "dayIndex": 1,
+            "startAt": "2025-09-15T10:00:00.000Z",
+            "endAt": "2025-09-15T12:00:00.000Z",
+            "title": "Visit Beach",
+            "description": "Relax at the beach",
+            "locationId": "uuid",
+            "order": 0,
+            "location": {
+              "id": "uuid",
+              "name": "Cox's Bazar Beach",
+              "address": "Beach Road",
+              "city": "Cox's Bazar",
+              "country": "Bangladesh"
+            }
+          }
+        ]
+      }
+    ],
+    "totalDays": 7
+  }
+}
+```
+- **Error Handling:**
+  - If plan is PRIVATE and user not logged in: Show message "Login to view itinerary" with login button
+  - If plan not found: 404 error
+  - If user doesn't have access: 403 error
+
+**Display Structure:**
+
+- **Day Accordion/Cards:**
+  - Each day as expandable section or card
+  - Day number + Date (calculated from plan startDate)
+  - Items listed chronologically (by startAt time if available, otherwise by order)
+  - Default: All days expanded (or accordion with first day expanded)
+
+- **Item Display Format:**
+  - **Time Range** (if available): "10:00 AM - 12:00 PM" or "10:00 AM" (if only startAt)
+  - **Title** (bold, prominent)
+  - **Description** (if available, smaller text)
+  - **Location** (if available): Location name with map pin icon
+    - Clickable: Opens map or location details
+  - **Duration** (calculated from startAt/endAt if both available)
 
 **Styling:**
 
-- Modal overlay
-- Centered modal content
-- Clear call-to-action buttons
+- **Timeline View (Optional):**
+  - Vertical timeline connecting items
+  - Time markers on left
+  - Content on right
+  - Visual flow from top to bottom
+
+- **Card View (Alternative):**
+  - Each item as a card
+  - Clear visual hierarchy
+  - Consistent spacing
+  - Hover effects
+
+- **Responsive Layout:**
+  - Mobile: Stacked, single column
+  - Tablet: 2 columns (if timeline view)
+  - Desktop: Full timeline or grid layout
+
+- **Visual Elements:**
+  - Day separators (clear visual break)
+  - Time indicators (if available)
+  - Location icons
+  - Smooth expand/collapse animations (if accordion)
+
+**No Separate Page Needed:**
+
+- Itinerary is fully visible in Plan Details page
+- No "View Full Itinerary" button
+- No redirect to separate itinerary page
+- All items displayed inline
+
+**Loading States:**
+
+- Show skeleton loaders while fetching
+- Progressive loading (show days as they load)
+
+**Empty State:**
+
+- If no itinerary items: "No itinerary planned yet"
+- Show message in itinerary section
 
 ---
 
@@ -1370,11 +1496,169 @@ Same as login page (split or centered)
 
 ---
 
-#### Quick Stats Cards (4 Cards)
+#### API Integration
+
+**User Dashboard Overview:**
+- **Endpoint:** `GET /api/v1/dashboard/overview`
+- **Authentication:** Required (USER or ADMIN)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "User dashboard overview retrieved successfully.",
+  "data": {
+    "stats": {
+      "totalPlans": 10,
+      "upcomingTrips": 3,
+      "totalExpenses": 5000.50,
+      "activeSubscription": true
+    },
+    "charts": {
+      "expensesByCategory": [
+        {
+          "category": "FOOD",
+          "amount": 2000.00,
+          "percentage": 40.00
+        },
+        {
+          "category": "TRANSPORT",
+          "amount": 1500.00,
+          "percentage": 30.00
+        }
+      ],
+      "plansTimeline": [
+        {
+          "month": "2025-01",
+          "count": 2
+        },
+        {
+          "month": "2025-02",
+          "count": 5
+        }
+      ]
+    },
+    "recentActivity": [
+      {
+        "type": "PLAN_CREATED",
+        "message": "You created plan 'Trip to Paris'",
+        "timestamp": "2025-01-15T10:30:00Z",
+        "link": "/dashboard/travel-plans/:id"
+      }
+    ],
+    "upcomingMeetups": [
+      {
+        "id": "uuid",
+        "planTitle": "Weekend Getaway",
+        "location": "Cox's Bazar",
+        "scheduledAt": "2025-02-20T14:00:00Z",
+        "rsvpStatus": "ACCEPTED"
+      }
+    ],
+    "recentNotifications": [
+      {
+        "id": "uuid",
+        "type": "MEMBER_JOINED",
+        "message": "John joined your plan",
+        "isRead": false,
+        "timestamp": "2025-01-15T09:00:00Z",
+        "link": "/dashboard/travel-plans/:id"
+      }
+    ]
+  }
+}
+```
+
+**Admin Dashboard Overview:**
+- **Endpoint:** `GET /api/v1/dashboard/admin/overview`
+- **Authentication:** Required (ADMIN only)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Admin dashboard overview retrieved successfully.",
+  "data": {
+    "stats": {
+      "totalUsers": 150,
+      "activeUsers": 120,
+      "totalPlans": 500,
+      "publicPlans": 200,
+      "totalRevenue": 50000.00,
+      "activeSubscriptions": 80,
+      "totalMeetups": 300,
+      "totalExpenses": 100000.00
+    },
+    "charts": {
+      "revenueOverTime": [
+        {
+          "month": "2025-01",
+          "revenue": 5000.00
+        },
+        {
+          "month": "2025-02",
+          "revenue": 7500.00
+        }
+      ],
+      "plansByTravelType": [
+        {
+          "type": "SOLO",
+          "count": 50
+        },
+        {
+          "type": "FRIENDS",
+          "count": 120
+        }
+      ],
+      "userGrowth": [
+        {
+          "month": "2025-01",
+          "newUsers": 25
+        },
+        {
+          "month": "2025-02",
+          "newUsers": 40
+        }
+      ],
+      "subscriptionStatus": [
+        {
+          "status": "ACTIVE",
+          "count": 150,
+          "percentage": 75.00
+        },
+        {
+          "status": "CANCELLED",
+          "count": 30,
+          "percentage": 15.00
+        }
+      ]
+    },
+    "recentActivity": [
+      {
+        "type": "USER_REGISTERED",
+        "message": "New user registered: john@example.com",
+        "timestamp": "2025-01-15T10:30:00Z",
+        "link": "/admin/users/:id"
+      }
+    ],
+    "topPlans": [
+      {
+        "id": "uuid",
+        "title": "Summer Trip",
+        "memberCount": 15,
+        "expenseCount": 25,
+        "isFeatured": true
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### Quick Stats Cards (4 Cards) - User Dashboard
 
 **Card 1: Total Plans**
 
-- **Number:** Total travel plans count
+- **Number:** Total travel plans count (from `stats.totalPlans`)
 - **Label:** "Travel Plans"
 - **Icon:** Map icon
 - **Link:** `/dashboard/travel-plans`
@@ -1382,7 +1666,7 @@ Same as login page (split or centered)
 
 **Card 2: Upcoming Trips**
 
-- **Number:** Count of future trips
+- **Number:** Count of future trips (from `stats.upcomingTrips`)
 - **Label:** "Upcoming Trips"
 - **Icon:** Calendar icon
 - **Link:** `/dashboard/travel-plans?type=future`
@@ -1390,7 +1674,7 @@ Same as login page (split or centered)
 
 **Card 3: Total Expenses**
 
-- **Number:** Total amount spent (formatted: $X,XXX)
+- **Number:** Total amount spent (from `stats.totalExpenses`, formatted: $X,XXX)
 - **Label:** "Total Expenses"
 - **Icon:** Dollar icon
 - **Link:** `/dashboard/expenses`
@@ -1398,7 +1682,7 @@ Same as login page (split or centered)
 
 **Card 4: Active Subscription**
 
-- **Number/Status:** Active subscription status or "Inactive"
+- **Number/Status:** Active subscription status (from `stats.activeSubscription`) or "Inactive"
 - **Label:** "Subscription"
 - **Icon:** Credit Card icon
 - **Link:** `/dashboard/subscriptions`
@@ -1414,25 +1698,182 @@ Same as login page (split or centered)
 
 ---
 
+#### Quick Stats Cards (8 Cards) - Admin Dashboard
+
+**Card 1: Total Users**
+
+- **Number:** Total users count (from `stats.totalUsers`)
+- **Label:** "Total Users"
+- **Icon:** Users icon
+- **Link:** `/admin/users`
+- **Color:** Blue
+
+**Card 2: Active Users**
+
+- **Number:** Active users in last 30 days (from `stats.activeUsers`)
+- **Label:** "Active Users"
+- **Icon:** User check icon
+- **Link:** `/admin/users?active=true`
+- **Color:** Green
+
+**Card 3: Total Plans**
+
+- **Number:** Total travel plans count (from `stats.totalPlans`)
+- **Label:** "Total Plans"
+- **Icon:** Map icon
+- **Link:** `/admin/plans`
+- **Color:** Purple
+
+**Card 4: Public Plans**
+
+- **Number:** Public plans count (from `stats.publicPlans`)
+- **Label:** "Public Plans"
+- **Icon:** Globe icon
+- **Link:** `/admin/plans?visibility=PUBLIC`
+- **Color:** Teal
+
+**Card 5: Total Revenue**
+
+- **Number:** Total revenue from successful payments (from `stats.totalRevenue`, formatted: $X,XXX)
+- **Label:** "Total Revenue"
+- **Icon:** Dollar icon
+- **Link:** `/dashboard/payments`
+- **Color:** Green
+
+**Card 6: Active Subscriptions**
+
+- **Number:** Active subscriptions count (from `stats.activeSubscriptions`)
+- **Label:** "Active Subscriptions"
+- **Icon:** Credit Card icon
+- **Link:** `/dashboard/subscriptions`
+- **Color:** Orange
+
+**Card 7: Total Meetups**
+
+- **Number:** Total meetups count (from `stats.totalMeetups`)
+- **Label:** "Total Meetups"
+- **Icon:** Calendar icon
+- **Link:** `/admin/meetups`
+- **Color:** Pink
+
+**Card 8: Total Expenses**
+
+- **Number:** Total expenses across all plans (from `stats.totalExpenses`, formatted: $X,XXX)
+- **Label:** "Total Expenses"
+- **Icon:** Receipt icon
+- **Link:** `/admin/expenses`
+- **Color:** Red
+
+**Styling:**
+
+- Grid layout: 1 column (mobile), 2 columns (tablet), 4 columns (desktop)
+- Card design with shadow
+- Hover effects
+- Clickable (navigate on click)
+
+---
+
+#### Charts Section - User Dashboard
+
+**Chart 1: Expenses by Category (Pie Chart)**
+
+- **Data Source:** `charts.expensesByCategory`
+- **Fields:** `category`, `amount`, `percentage`
+- **Display:** Pie chart showing expense distribution by category
+- **Categories:** FOOD, TRANSPORT, ACCOMMODATION, ACTIVITY, SHOPPING, OTHER
+- **Styling:** Color-coded segments with labels showing percentage
+
+**Chart 2: Plans Timeline (Line Chart)**
+
+- **Data Source:** `charts.plansTimeline`
+- **Fields:** `month` (YYYY-MM format), `count`
+- **Display:** Line chart showing plan creation trend over last 6 months
+- **X-axis:** Months (last 6 months)
+- **Y-axis:** Number of plans created
+- **Styling:** Line with markers, smooth curve
+
+---
+
+#### Charts Section - Admin Dashboard
+
+**Chart 1: Revenue Over Time (Area Chart)**
+
+- **Data Source:** `charts.revenueOverTime`
+- **Fields:** `month` (YYYY-MM format), `revenue`
+- **Display:** Area chart showing monthly revenue trend (last 6 months)
+- **X-axis:** Months
+- **Y-axis:** Revenue amount
+- **Styling:** Filled area with gradient, smooth curve
+
+**Chart 2: Plans by Travel Type (Bar Chart)**
+
+- **Data Source:** `charts.plansByTravelType`
+- **Fields:** `type` (SOLO, COUPLE, FAMILY, FRIENDS, GROUP), `count`
+- **Display:** Bar chart showing plan distribution by travel type
+- **X-axis:** Travel types
+- **Y-axis:** Count of plans
+- **Styling:** Horizontal or vertical bars, color-coded
+
+**Chart 3: User Growth (Line Chart)**
+
+- **Data Source:** `charts.userGrowth`
+- **Fields:** `month` (YYYY-MM format), `newUsers`
+- **Display:** Line chart showing new user registrations (last 6 months)
+- **X-axis:** Months
+- **Y-axis:** Number of new users
+- **Styling:** Line with markers, different color from revenue chart
+
+**Chart 4: Subscription Status (Pie Chart)**
+
+- **Data Source:** `charts.subscriptionStatus`
+- **Fields:** `status` (ACTIVE, CANCELLED, EXPIRED, etc.), `count`, `percentage`
+- **Display:** Pie chart showing subscription status distribution
+- **Styling:** Color-coded segments with labels showing percentage
+
+---
+
+#### Top Performing Plans Section - Admin Dashboard
+
+**Title:** "Top Performing Plans"
+
+**List:** Top 5 plans (from `topPlans` array)
+
+**Plan Item:**
+
+- **Title:** Plan title (from `title` field)
+- **Member Count:** Number of members (from `memberCount`)
+- **Expense Count:** Number of expenses (from `expenseCount`)
+- **Featured Badge:** Show if `isFeatured` is true
+- **Link:** Link to plan details (use `id` to construct link: `/dashboard/travel-plans/:id`)
+
+**Styling:**
+
+- Card or list layout
+- Highlight featured plans
+- Show metrics prominently
+- "View All Plans" link
+
+---
+
 #### Recent Activity Section
 
 **Title:** "Recent Activity"
 
-**List:** Last 5-10 activities
+**List:** Last 5-10 activities (from `recentActivity` array)
 
 **Activity Item Format:**
 
-- **Icon:** Activity type icon
-- **Message:** "You created plan 'Trip to Paris'"
-- **Timestamp:** "2 hours ago" or absolute date
-- **Link:** Link to related item (if applicable)
+- **Icon:** Activity type icon (based on `type` field)
+- **Message:** Activity message (from `message` field)
+- **Timestamp:** Format as "2 hours ago" or absolute date (from `timestamp`)
+- **Link:** Navigate to related item (from `link` field if available)
 
 **Examples:**
 
-- "You created plan 'Trip to Paris'"
-- "John joined your plan 'Beach Vacation'"
-- "New expense added to 'Europe Trip'"
-- "Meetup scheduled for 'Weekend Getaway'"
+- "You created plan 'Trip to Paris'" (type: PLAN_CREATED)
+- "John joined your plan 'Beach Vacation'" (type: MEMBER_JOINED)
+- "New expense added to 'Europe Trip'" (type: EXPENSE_ADDED)
+- "Meetup scheduled for 'Weekend Getaway'" (type: MEETUP_CREATED)
 
 **Styling:**
 
@@ -1448,20 +1889,21 @@ Same as login page (split or centered)
 
 **Title:** "Upcoming Meetups"
 
-**List:** Next 3-5 meetups
+**List:** Next 3-5 meetups (from `upcomingMeetups` array)
 
 **Meetup Item:**
 
-- **Meetup Name/Location:** Title or location
-- **Date and Time:** Formatted date/time
-- **RSVP Status:** Accepted/Declined/Pending badge
-- **Link:** Link to meetup details
+- **Plan Title:** From `planTitle` field
+- **Location:** From `location` field
+- **Date and Time:** Format `scheduledAt` date/time
+- **RSVP Status:** Badge showing `rsvpStatus` (ACCEPTED/DECLINED/PENDING)
+- **Link:** Link to meetup details (use `id` to construct link)
 
 **Styling:**
 
 - Card or list layout
 - Date highlighted
-- Status badges
+- Status badges (color-coded)
 - "View All Meetups" link
 
 ---
@@ -1470,20 +1912,20 @@ Same as login page (split or centered)
 
 **Title:** "Recent Notifications"
 
-**List:** Last 5 unread notifications
+**List:** Last 5 unread notifications (from `recentNotifications` array)
 
 **Notification Item:**
 
-- **Icon:** Notification type icon
-- **Message:** Notification text
-- **Timestamp:** "5 minutes ago"
-- **Action:** "Mark as read" button
-- **Link:** Link to related item
+- **Icon:** Notification type icon (from `type` field)
+- **Message:** Notification text (from `message` field)
+- **Timestamp:** Format as "5 minutes ago" (from `timestamp`)
+- **Action:** "Mark as read" button (if `isRead` is false)
+- **Link:** Navigate to related item (from `link` field)
 
 **Styling:**
 
 - List layout
-- Unread indicator (dot or background)
+- Unread indicator (dot or background) for `isRead: false`
 - "View All Notifications" link → `/dashboard/notifications`
 
 ---
@@ -1505,12 +1947,12 @@ Same as login page (split or centered)
 **Authentication:** Required
 
 **Query Parameters:**
-- `type`: Filter by type - "future" | "past" (optional)
-- `visibility`: "PUBLIC" | "PRIVATE" | "UNLISTED" (optional)
+- `searchTerm`: Search in title or destination (optional)
 - `travelType`: "SOLO" | "COUPLE" | "FAMILY" | "FRIENDS" | "GROUP" (optional)
-- `searchTerm`: Search in title, destination, description (optional)
-- `sortBy`: "createdAt" | "startDate" | "budgetMin" (optional, default: "createdAt")
-- `sortOrder`: "asc" | "desc" (optional, default: "desc")
+- `visibility`: "PUBLIC" | "PRIVATE" | "UNLISTED" (optional)
+- `isFeatured`: "true" | "false" (optional)
+- `sortBy`: Sort field (optional, default: "startDate")
+- `sortOrder`: "asc" | "desc" (optional, default: "asc")
 - `page`: Page number (optional, default: 1)
 - `limit`: Items per page (optional, default: 10)
 
@@ -1538,6 +1980,11 @@ Same as login page (split or centered)
       "visibility": "PUBLIC",
       "coverPhoto": "url",
       "description": "Description text",
+      "totalDays": 7,
+      "_count": {
+        "itineraryItems": 12,
+        "tripMembers": 4
+      },
       "createdAt": "2025-01-01T00:00:00.000Z",
       "updatedAt": "2025-01-01T00:00:00.000Z"
     }

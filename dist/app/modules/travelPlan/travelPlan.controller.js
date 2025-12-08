@@ -38,6 +38,16 @@ const getMyTravelPlans = (0, catchAsync_1.default)((req, res) => __awaiter(void 
         data: result.data
     });
 }));
+const getPublicTravelPlans = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield travelPlan_service_1.TravelPlanService.getPublicTravelPlans(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "Public travel plans retrieved successfully.",
+        meta: result.meta,
+        data: result.data
+    });
+}));
 const getSingleTravelPlan = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
     const result = yield travelPlan_service_1.TravelPlanService.getSingleTravelPlan(authUser, req.params.id);
@@ -71,6 +81,7 @@ const deleteTravelPlan = (0, catchAsync_1.default)((req, res) => __awaiter(void 
 exports.TravelPlanController = {
     createTravelPlan,
     getMyTravelPlans,
+    getPublicTravelPlans,
     getSingleTravelPlan,
     updateTravelPlan,
     deleteTravelPlan

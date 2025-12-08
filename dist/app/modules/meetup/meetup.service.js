@@ -125,9 +125,13 @@ const createMeetup = (authUser, payload) => __awaiter(void 0, void 0, void 0, fu
     if (!member && plan.visibility !== client_1.PlanVisibility.PUBLIC) {
         throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "You must be a member of this plan to create a meetup.");
     }
+    // Check if plan has ended
+    const now = new Date();
+    if (plan.endDate < now) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "This travel plan has ended. No meetup can be scheduled now for this plan.");
+    }
     // Validate scheduledAt is in the future
     const scheduledAt = new Date(payload.scheduledAt);
-    const now = new Date();
     if (isNaN(scheduledAt.getTime()) || scheduledAt <= now) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Scheduled date must be a valid future date.");
     }

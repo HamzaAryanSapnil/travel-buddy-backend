@@ -44,7 +44,7 @@ const assertCanModifyPlan = async (authUser: TAuthUser, planId: string) => {
   return plan;
 };
 
-const assertCanViewPlan = async (authUser: TAuthUser, planId: string) => {
+const assertCanViewPlan = async (authUser: TAuthUser | null, planId: string) => {
   const plan = await prisma.travelPlan.findUnique({
     where: { id: planId },
   });
@@ -53,12 +53,20 @@ const assertCanViewPlan = async (authUser: TAuthUser, planId: string) => {
     throw new ApiError(httpStatus.NOT_FOUND, "Travel plan not found.");
   }
 
-  // Check if plan is PUBLIC - anyone can view
+  // Check if plan is PUBLIC - anyone can view (even without auth)
   if (plan.visibility === PlanVisibility.PUBLIC) {
     return plan;
   }
 
-  // For PRIVATE/UNLISTED plans, check if user is a member
+  // For PRIVATE/UNLISTED plans, require authentication
+  if (!authUser) {
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      "Authentication required to view this plan."
+    );
+  }
+
+  // Check if user is a member
   const { member } = await TripMemberService.getTripMemberPermission(
     authUser,
     planId
@@ -260,7 +268,107 @@ const getMyTravelPlans = async (
   };
 };
 
-const getSingleTravelPlan = async (authUser: TAuthUser, id: string) => {
+const getPublicTravelPlans = async (query: TTravelPlanQuery) => {
+  const filters = pick<TTravelPlanQuery, keyof TTravelPlanQuery>(
+    query,
+    travelPlanFilterableFields as (keyof TTravelPlanQuery)[]
+  );
+  
+  const options: IPaginationOptions = {
+    page: query.page ?? 1,
+    limit: query.limit ?? 10,
+    sortBy: query.sortBy ?? "startDate",
+    sortOrder: query.sortOrder ?? "asc",
+  };
+  
+  const { page, limit, skip, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(options);
+
+  const { searchTerm, ...restFilters } = filters as {
+    searchTerm?: string;
+    travelType?: string;
+    visibility?: string;
+    isFeatured?: string;
+  };
+
+  const andConditions: Prisma.TravelPlanWhereInput[] = [];
+
+  // Only PUBLIC plans
+  andConditions.push({
+    visibility: PlanVisibility.PUBLIC,
+  });
+
+  if (searchTerm) {
+    andConditions.push({
+      OR: travelPlanSearchableFields.map((field) => ({
+        [field]: {
+          contains: searchTerm,
+          mode: "insensitive",
+        },
+      })),
+    });
+  }
+
+  if (restFilters.travelType) {
+    andConditions.push({
+      travelType: restFilters.travelType as any,
+    });
+  }
+
+  if (restFilters.isFeatured) {
+    const isFeatured = restFilters.isFeatured === "true";
+    andConditions.push({
+      isFeatured,
+    });
+  }
+
+  const where: Prisma.TravelPlanWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const plans = await prisma.travelPlan.findMany({
+    where,
+    skip,
+    take: limit,
+    orderBy: {
+      [sortBy]: sortOrder,
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          fullName: true,
+          profileImage: true,
+        },
+      },
+      _count: {
+        select: {
+          itineraryItems: true,
+          tripMembers: true,
+        },
+      },
+    },
+  });
+
+  const total = await prisma.travelPlan.count({
+    where,
+  });
+
+  const dataWithTotalDays = plans.map((plan) => ({
+    ...plan,
+    totalDays: getTotalDays(plan.startDate, plan.endDate),
+  }));
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+    },
+    data: dataWithTotalDays,
+  };
+};
+
+const getSingleTravelPlan = async (authUser: TAuthUser | null, id: string) => {
   const plan = await assertCanViewPlan(authUser, id);
 
   const fullPlan = await prisma.travelPlan.findUniqueOrThrow({
@@ -438,6 +546,7 @@ const deleteTravelPlan = async (authUser: TAuthUser, id: string) => {
 export const TravelPlanService = {
   createTravelPlan,
   getMyTravelPlans,
+  getPublicTravelPlans,
   getSingleTravelPlan,
   updateTravelPlan,
   deleteTravelPlan,

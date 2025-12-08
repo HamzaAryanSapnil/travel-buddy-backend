@@ -18,6 +18,7 @@ const subscription_routes_1 = require("../modules/subscription/subscription.rout
 const payment_routes_1 = require("../modules/payment/payment.routes");
 const media_routes_1 = require("../modules/media/media.routes");
 const review_routes_1 = require("../modules/review/review.routes");
+const dashboard_routes_1 = require("../modules/dashboard/dashboard.routes");
 const router = express_1.default.Router();
 const moduleRoutes = [
     {
@@ -75,6 +76,10 @@ const moduleRoutes = [
     {
         path: "/reviews",
         route: review_routes_1.ReviewRoutes,
+    },
+    {
+        path: "/dashboard",
+        route: dashboard_routes_1.DashboardRoutes,
     },
 ];
 moduleRoutes.forEach((route) => router.use(route.path, route.route));

@@ -54,11 +54,15 @@ const assertCanViewPlan = (authUser, planId) => __awaiter(void 0, void 0, void 0
     if (!plan) {
         throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Travel plan not found.");
     }
-    // Check if plan is PUBLIC - anyone can view
+    // Check if plan is PUBLIC - anyone can view (even without auth)
     if (plan.visibility === client_1.PlanVisibility.PUBLIC) {
         return plan;
     }
-    // For PRIVATE/UNLISTED plans, check if user is a member
+    // For PRIVATE/UNLISTED plans, require authentication
+    if (!authUser) {
+        throw new ApiError_1.default(http_status_1.default.UNAUTHORIZED, "Authentication required to view this plan.");
+    }
+    // Check if user is a member
     const { member } = yield tripMember_service_1.TripMemberService.getTripMemberPermission(authUser, planId);
     if (!member) {
         throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "You are not allowed to view this plan.");
@@ -68,8 +72,12 @@ const assertCanViewPlan = (authUser, planId) => __awaiter(void 0, void 0, void 0
 const createTravelPlan = (authUser, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const startDate = new Date(payload.startDate);
     const endDate = new Date(payload.endDate);
+    const now = new Date();
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Invalid date format.");
+    }
+    if (startDate <= now) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Start date must be a future date. Past dates are not allowed.");
     }
     if (endDate < startDate) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "endDate must be greater than or equal to startDate.");
@@ -198,6 +206,80 @@ const getMyTravelPlans = (authUser, query) => __awaiter(void 0, void 0, void 0, 
         data: dataWithTotalDays,
     };
 });
+const getPublicTravelPlans = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
+    const filters = (0, pick_1.default)(query, travelPlan_constant_1.travelPlanFilterableFields);
+    const options = {
+        page: (_a = query.page) !== null && _a !== void 0 ? _a : 1,
+        limit: (_b = query.limit) !== null && _b !== void 0 ? _b : 10,
+        sortBy: (_c = query.sortBy) !== null && _c !== void 0 ? _c : "startDate",
+        sortOrder: (_d = query.sortOrder) !== null && _d !== void 0 ? _d : "asc",
+    };
+    const { page, limit, skip, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(options);
+    const _e = filters, { searchTerm } = _e, restFilters = __rest(_e, ["searchTerm"]);
+    const andConditions = [];
+    // Only PUBLIC plans
+    andConditions.push({
+        visibility: client_1.PlanVisibility.PUBLIC,
+    });
+    if (searchTerm) {
+        andConditions.push({
+            OR: travelPlan_constant_1.travelPlanSearchableFields.map((field) => ({
+                [field]: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                },
+            })),
+        });
+    }
+    if (restFilters.travelType) {
+        andConditions.push({
+            travelType: restFilters.travelType,
+        });
+    }
+    if (restFilters.isFeatured) {
+        const isFeatured = restFilters.isFeatured === "true";
+        andConditions.push({
+            isFeatured,
+        });
+    }
+    const where = andConditions.length > 0 ? { AND: andConditions } : {};
+    const plans = yield prisma_1.prisma.travelPlan.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+            [sortBy]: sortOrder,
+        },
+        include: {
+            owner: {
+                select: {
+                    id: true,
+                    fullName: true,
+                    profileImage: true,
+                },
+            },
+            _count: {
+                select: {
+                    itineraryItems: true,
+                    tripMembers: true,
+                },
+            },
+        },
+    });
+    const total = yield prisma_1.prisma.travelPlan.count({
+        where,
+    });
+    const dataWithTotalDays = plans.map((plan) => (Object.assign(Object.assign({}, plan), { totalDays: getTotalDays(plan.startDate, plan.endDate) })));
+    return {
+        meta: {
+            page,
+            limit,
+            total,
+        },
+        data: dataWithTotalDays,
+    };
+});
 const getSingleTravelPlan = (authUser, id) => __awaiter(void 0, void 0, void 0, function* () {
     const plan = yield assertCanViewPlan(authUser, id);
     const fullPlan = yield prisma_1.prisma.travelPlan.findUniqueOrThrow({
@@ -275,7 +357,15 @@ const updateTravelPlan = (authUser, id, payload) => __awaiter(void 0, void 0, vo
             ? new Date(payload.startDate)
             : existing.startDate;
         const end = payload.endDate ? new Date(payload.endDate) : existing.endDate;
-        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+        const now = new Date();
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Invalid date format.");
+        }
+        // If startDate is being updated, it must be a future date
+        if (payload.startDate !== undefined && start <= now) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Start date must be a future date. Past dates are not allowed.");
+        }
+        if (end < start) {
             throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Invalid dates. endDate must be greater than or equal to startDate.");
         }
         data.startDate = start;
@@ -316,6 +406,7 @@ const deleteTravelPlan = (authUser, id) => __awaiter(void 0, void 0, void 0, fun
 exports.TravelPlanService = {
     createTravelPlan,
     getMyTravelPlans,
+    getPublicTravelPlans,
     getSingleTravelPlan,
     updateTravelPlan,
     deleteTravelPlan,

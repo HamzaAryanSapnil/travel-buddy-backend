@@ -18,12 +18,12 @@ router.get("/:planId", (0, validateRequest_1.default)(itinerary_validation_1.Iti
 // Get single item
 // Note: For PUBLIC plans, this can be accessed without auth
 router.get("/item/:id", (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.getSingleItem), itinerary_controller_1.ItineraryController.getSingleItem);
-// Update item
-router.patch("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.updateItem), itinerary_controller_1.ItineraryController.updateItem);
-// Delete item
-router.delete("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.deleteItem), itinerary_controller_1.ItineraryController.deleteItem);
-// Bulk upsert (for AI Planner)
+// Bulk upsert (for AI Planner) - Specific route, must be before dynamic routes
 router.post("/bulk", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.bulkUpsert), itinerary_controller_1.ItineraryController.bulkUpsert);
-// Reorder items
+// Reorder items - Specific route, MUST be before /:id route
 router.patch("/reorder", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.reorder), itinerary_controller_1.ItineraryController.reorderItems);
+// Update item - Dynamic route, must be AFTER specific routes
+router.patch("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.updateItem), itinerary_controller_1.ItineraryController.updateItem);
+// Delete item - Dynamic route
+router.delete("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.deleteItem), itinerary_controller_1.ItineraryController.deleteItem);
 exports.ItineraryRoutes = router;

@@ -1,10 +1,17 @@
 import express from "express";
 import auth from "../../middlewares/auth";
+import optionalAuth from "../../middlewares/optionalAuth";
 import validateRequest from "../../middlewares/validateRequest";
 import { TravelPlanController } from "./travelPlan.controller";
 import { TravelPlanValidation } from "./travelPlan.validation";
 
 const router = express.Router();
+
+// Public route - Get all PUBLIC travel plans (NO AUTH REQUIRED)
+router.get(
+    "/public",
+    TravelPlanController.getPublicTravelPlans
+);
 
 router.post(
     "/",
@@ -19,9 +26,10 @@ router.get(
     TravelPlanController.getMyTravelPlans
 );
 
+// Public route with optional auth - Get single plan (PUBLIC plans accessible without auth)
 router.get(
     "/:id",
-    auth("USER", "ADMIN"),
+    optionalAuth(),
     validateRequest(TravelPlanValidation.getSingleTravelPlan),
     TravelPlanController.getSingleTravelPlan
 );

@@ -153,11 +153,21 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/users/me/travel-plans",
+              "raw": "{{baseUrl}}/api/v1/travel-plans?searchTerm=beach&travelType=FRIENDS&visibility=PUBLIC&page=1&limit=10&sortBy=startDate&sortOrder=asc&isFeatured=true",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "users", "me", "travel-plans"]
+              "path": ["api", "v1", "travel-plans"],
+              "query": [
+                { "key": "searchTerm", "value": "beach", "description": "Search in title or destination (optional)" },
+                { "key": "travelType", "value": "FRIENDS", "description": "Filter by travel type (optional)" },
+                { "key": "visibility", "value": "PUBLIC", "description": "Filter by visibility (optional)" },
+                { "key": "page", "value": "1", "description": "Page number (optional, default: 1)" },
+                { "key": "limit", "value": "10", "description": "Items per page (optional, default: 10)" },
+                { "key": "sortBy", "value": "startDate", "description": "Sort field (optional, default: startDate)" },
+                { "key": "sortOrder", "value": "asc", "description": "Sort order: asc or desc (optional, default: asc)" },
+                { "key": "isFeatured", "value": "true", "description": "Filter by featured status (optional)" }
+              ]
             },
-            "description": "Get all travel plans created by the authenticated user. Accepts optional pagination and filtering via query params. Requires authentication."
+            "description": "Get all travel plans for the authenticated user (membership/ownership). Supports pagination, search, and filtering. Query params: searchTerm, travelType, visibility, isFeatured, page, limit, sortBy, sortOrder. Requires authentication."
           }
         },
         {
@@ -293,6 +303,59 @@
           }
         },
         {
+          "name": "Get Public Travel Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans/public?travelType=FRIENDS&searchTerm=cox&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans", "public"],
+              "query": [
+                {
+                  "key": "travelType",
+                  "value": "FRIENDS",
+                  "description": "Filter by travel type (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "searchTerm",
+                  "value": "cox",
+                  "description": "Search in title, destination, origin (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "isFeatured",
+                  "value": "",
+                  "description": "Filter by featured status: true or false (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (optional)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "startDate",
+                  "description": "Sort field (optional)"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc",
+                  "description": "Sort order: asc or desc (optional)"
+                }
+              ]
+            },
+            "description": "Get all PUBLIC travel plans. No authentication required. Returns only plans with visibility: PUBLIC. Supports pagination, filtering, search, and sorting."
+          }
+        },
+        {
           "name": "Get My Travel Plans",
           "request": {
             "method": "GET",
@@ -345,7 +408,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "travel-plans", "{{planId}}"]
             },
-            "description": "Get details for a single travel plan (owned or public). Requires authentication for private plans. Replace {{planId}} with actual id."
+            "description": "Get details for a single travel plan. PUBLIC plans: No authentication required. PRIVATE/UNLISTED plans: Authentication required (must be a plan member). Replace {{planId}} with actual id."
           }
         },
         {
@@ -2063,6 +2126,90 @@
               "path": ["api", "v1", "reviews", "{{reviewId}}"]
             },
             "description": "Delete (remove) a review by ID (written by you or admin)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Routes",
+      "item": [
+        {
+          "name": "Get Public Travel Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans/public?searchTerm=cox&travelType=FRIENDS&isFeatured=true&page=1&limit=10&sortBy=startDate&sortOrder=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans", "public"],
+              "query": [
+                { "key": "searchTerm", "value": "cox", "description": "Search in title or destination (optional)" },
+                { "key": "travelType", "value": "FRIENDS", "description": "Filter by travel type (optional)" },
+                { "key": "isFeatured", "value": "true", "description": "Filter by featured status (optional)" },
+                { "key": "page", "value": "1", "description": "Page number (optional, default: 1)" },
+                { "key": "limit", "value": "10", "description": "Items per page (optional, default: 10)" },
+                { "key": "sortBy", "value": "startDate", "description": "Sort field (optional, default: startDate)" },
+                { "key": "sortOrder", "value": "asc", "description": "Sort order: asc or desc (optional, default: asc)" }
+              ]
+            },
+            "description": "Get all PUBLIC travel plans. No authentication required. Returns only plans with visibility: PUBLIC. Supports pagination, filtering, search, and sorting."
+          }
+        },
+        {
+          "name": "Get Public Travel Plan Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans", "{{planId}}"]
+            },
+            "description": "Get details for a single travel plan. PUBLIC plans: No authentication required. PRIVATE/UNLISTED plans: Authentication required (must be a plan member). Replace {{planId}} with actual id."
+          }
+        },
+        {
+          "name": "Get Public Itinerary (by Plan)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/itinerary/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "itinerary", "{{planId}}"]
+            },
+            "description": "Get full itinerary for a plan. PUBLIC plans: No authentication required. PRIVATE/UNLISTED plans: Authentication required (must be a plan member). Returns items grouped by day."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get User Dashboard Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "dashboard", "overview"]
+            },
+            "description": "Get user dashboard overview with stats (total plans, upcoming trips, total expenses, active subscription), charts (expenses by category - pie chart, plans timeline - line chart), recent activity, upcoming meetups, and recent notifications. Requires authentication (USER or ADMIN). Note: Admins should use /dashboard/admin/overview endpoint."
+          }
+        },
+        {
+          "name": "Get Admin Dashboard Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/admin/overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "dashboard", "admin", "overview"]
+            },
+            "description": "Get admin dashboard overview with system-wide stats (total users, active users, total plans, public plans, total revenue, active subscriptions, total meetups, total expenses), 4 charts (revenue over time - area chart, plans by travel type - bar chart, user growth - line chart, subscription status - pie chart), recent activity, and top performing plans. Requires ADMIN role."
           }
         }
       ]

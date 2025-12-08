@@ -19,7 +19,7 @@ const sendResponse_1 = __importDefault(require("../../shared/sendResponse"));
 const tripMember_service_1 = require("./tripMember.service");
 const addMember = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
-    const result = yield tripMember_service_1.TripMemberService.addMember(authUser, req.body);
+    const result = yield tripMember_service_1.TripMemberService.addMember(authUser, Object.assign(Object.assign({}, req.body), { planId: req.params.planId }));
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.CREATED,
         success: true,
@@ -39,7 +39,7 @@ const getMembers = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
 }));
 const updateMemberRole = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
-    const result = yield tripMember_service_1.TripMemberService.updateMemberRole(authUser, req.params.id, req.body);
+    const result = yield tripMember_service_1.TripMemberService.updateMemberRole(authUser, Object.assign(Object.assign({}, req.body), { planId: req.params.planId }));
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
