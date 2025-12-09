@@ -540,8 +540,8 @@ const updateTravelPlan = async (
   if (payload.origin !== undefined) data.origin = payload.origin;
   if (payload.description !== undefined) data.description = payload.description;
   if (payload.coverPhoto !== undefined && !files) data.coverPhoto = payload.coverPhoto;
-  if (payload.budgetMin !== undefined) data.budgetMin = payload.budgetMin;
-  if (payload.budgetMax !== undefined) data.budgetMax = payload.budgetMax;
+  if (payload.budgetMin !== undefined) data.budgetMin = Number(payload.budgetMin);
+  if (payload.budgetMax !== undefined) data.budgetMax = Number(payload.budgetMax);
 
   if (payload.travelType !== undefined) {
     data.travelType = payload.travelType;
