@@ -1,5 +1,7 @@
 import { ChatThreadType, NotificationType, PlanVisibility, Prisma, TripRole, TripStatus } from "@prisma/client";
 import httpStatus from "http-status";
+import fs from "fs/promises";
+import cloudinary from "../../config/cloudinary.config";
 import ApiError from "../../errors/ApiError";
 import {
   paginationHelper,
@@ -84,7 +86,8 @@ const assertCanViewPlan = async (authUser: TAuthUser | null, planId: string) => 
 
 const createTravelPlan = async (
   authUser: TAuthUser,
-  payload: TTravelPlanCreatePayload
+  payload: TTravelPlanCreatePayload,
+  files?: Express.Multer.File[]
 ) => {
   const startDate = new Date(payload.startDate);
   const endDate = new Date(payload.endDate);
@@ -108,6 +111,41 @@ const createTravelPlan = async (
     );
   }
 
+  let coverPhotoUrl = payload.coverPhoto;
+  const galleryUrls: string[] = [];
+
+  // Upload files to Cloudinary
+  if (files && files.length > 0) {
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadResult = await cloudinary.uploader.upload(file.path, {
+          folder: `travel-buddy/plans`,
+          resource_type: "image",
+        });
+
+        // First file is coverPhoto
+        if (i === 0) {
+          coverPhotoUrl = uploadResult.secure_url;
+        } else {
+          galleryUrls.push(uploadResult.secure_url);
+        }
+
+        // Clean up temp file
+        try {
+          await fs.unlink(file.path);
+        } catch (err) {
+          // Ignore cleanup errors
+        }
+      }
+    } catch (error: any) {
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Image upload failed: ${error.message}`
+      );
+    }
+  }
+
   const result = await prisma.$transaction(async (tx) => {
     const plan = await tx.travelPlan.create({
       data: {
@@ -122,7 +160,7 @@ const createTravelPlan = async (
         travelType: payload.travelType,
         visibility: payload.visibility ?? PlanVisibility.PRIVATE,
         description: payload.description,
-        coverPhoto: payload.coverPhoto,
+        coverPhoto: coverPhotoUrl,
       },
     });
 
@@ -153,6 +191,19 @@ const createTravelPlan = async (
         role: "owner"
       }
     });
+
+    // Create media records for gallery images
+    if (galleryUrls.length > 0) {
+      await tx.media.createMany({
+        data: galleryUrls.map(url => ({
+          ownerId: authUser.userId,
+          planId: plan.id,
+          url,
+          provider: "cloudinary",
+          type: "photo",
+        })),
+      });
+    }
 
     return plan;
   });
@@ -409,7 +460,8 @@ const getSingleTravelPlan = async (authUser: TAuthUser | null, id: string) => {
 const updateTravelPlan = async (
   authUser: TAuthUser,
   id: string,
-  payload: TTravelPlanUpdatePayload
+  payload: TTravelPlanUpdatePayload,
+  files?: Express.Multer.File[]
 ) => {
   const existing = await assertCanModifyPlan(authUser, id);
 
@@ -442,11 +494,52 @@ const updateTravelPlan = async (
     }
   }
 
+  // Upload files to Cloudinary if provided
+  if (files && files.length > 0) {
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadResult = await cloudinary.uploader.upload(file.path, {
+          folder: `travel-buddy/plans`,
+          resource_type: "image",
+        });
+
+        // First file is coverPhoto
+        if (i === 0) {
+          data.coverPhoto = uploadResult.secure_url;
+        } else {
+          // Additional images are added to media/gallery
+          await prisma.media.create({
+            data: {
+              ownerId: authUser.userId,
+              planId: id,
+              url: uploadResult.secure_url,
+              provider: "cloudinary",
+              type: "photo",
+            },
+          });
+        }
+
+        // Clean up temp file
+        try {
+          await fs.unlink(file.path);
+        } catch (err) {
+          // Ignore cleanup errors
+        }
+      }
+    } catch (error: any) {
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Image upload failed: ${error.message}`
+      );
+    }
+  }
+
   if (payload.title !== undefined) data.title = payload.title;
   if (payload.destination !== undefined) data.destination = payload.destination;
   if (payload.origin !== undefined) data.origin = payload.origin;
   if (payload.description !== undefined) data.description = payload.description;
-  if (payload.coverPhoto !== undefined) data.coverPhoto = payload.coverPhoto;
+  if (payload.coverPhoto !== undefined && !files) data.coverPhoto = payload.coverPhoto;
   if (payload.budgetMin !== undefined) data.budgetMin = payload.budgetMin;
   if (payload.budgetMax !== undefined) data.budgetMax = payload.budgetMax;
 

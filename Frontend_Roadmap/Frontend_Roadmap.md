@@ -2177,17 +2177,19 @@ Same as login page (split or centered)
 - **Validation:** Max 2000 characters
 - **Error:** "Description cannot exceed 2000 characters"
 
-**11. Cover Photo** (optional):
+**11. Cover Photo & Gallery** (optional):
 
-- **Type:** file upload
-- **Label:** "Cover Photo"
-- **Accept:** image/\* (JPEG, PNG, WebP)
-- **Max Size:** 5MB
-- **Preview:** Show preview after upload
-- **Drag & Drop:** Support drag and drop
+- **Type:** file upload (multiple files supported)
+- **Label:** "Cover Photo & Gallery Images"
+- **Accept:** image/\* (JPEG, JPG, PNG, WebP, GIF, SVG, BMP, TIFF, HEIC, HEIF, ICO)
+- **Max Files:** 10 images per upload
+- **Max Size:** 5MB per image
+- **Preview:** Show preview after upload for all selected images
+- **Drag & Drop:** Support drag and drop for multiple files
 - **Upload Progress:** Progress indicator during upload
-- **Validation:** File type and size
-- **Error:** "Please upload a valid image file (max 5MB)"
+- **Validation:** File type and size per image
+- **Error:** "Please upload valid image files (max 5MB each, 10 files total)"
+- **Note:** First image becomes the cover photo; remaining images are stored as gallery/media
 
 ---
 
@@ -2208,38 +2210,54 @@ Same as login page (split or centered)
 **Create Plan Button:**
 
 - **Text:** "Create Plan"
-- **Action:** Submit form
+- **Action:** Submit form as multipart/form-data
 - **Loading State:** Show spinner, disable button
 - **API Call:** `POST /api/v1/travel-plans` with `credentials: 'include'`
-- **Request Body:**
-```json
-{
-  "title": "Spring Trip to Cox's Bazar",
-  "destination": "Cox's Bazar, Bangladesh",
-  "origin": "Dhaka, Bangladesh",
-  "startDate": "2025-09-15",
-  "endDate": "2025-09-21",
-  "travelType": "FRIENDS",
-  "budgetMin": 5000,
-  "budgetMax": 12000,
-  "visibility": "PUBLIC",
-  "description": "An awesome week-long trip!",
-  "coverPhoto": "https://my-cloudinary-url/trip-photo.jpg"
-}
+- **Content-Type:** `multipart/form-data`
+- **Request Body (FormData):**
+  - `title`: "Spring Trip to Cox's Bazar"
+  - `destination`: "Cox's Bazar, Bangladesh"
+  - `origin`: "Dhaka, Bangladesh" (optional)
+  - `startDate`: "2025-09-15"
+  - `endDate`: "2025-09-21"
+  - `travelType`: "FRIENDS"
+  - `budgetMin`: 5000 (optional)
+  - `budgetMax`: 12000 (optional)
+  - `visibility`: "PUBLIC"
+  - `description`: "An awesome week-long trip!" (optional)
+  - `files[]`: [File1, File2, ...] (optional, up to 10 images; first is coverPhoto)
+- **Implementation:**
+```javascript
+const formData = new FormData();
+formData.append('title', data.title);
+formData.append('destination', data.destination);
+if (data.origin) formData.append('origin', data.origin);
+formData.append('startDate', data.startDate);
+formData.append('endDate', data.endDate);
+formData.append('travelType', data.travelType);
+if (data.budgetMin) formData.append('budgetMin', data.budgetMin);
+if (data.budgetMax) formData.append('budgetMax', data.budgetMax);
+formData.append('visibility', data.visibility);
+if (data.description) formData.append('description', data.description);
+// Append all selected files
+files.forEach(file => formData.append('files', file));
 ```
 - **Validation Notes:**
   - `startDate` must be future date (YYYY-MM-DD format)
   - `endDate` must be >= `startDate`
   - `travelType` must be: SOLO, COUPLE, FAMILY, FRIENDS, GROUP
   - `visibility` must be: PUBLIC, PRIVATE, UNLISTED
-  - All fields required except `origin` and `coverPhoto`
+  - All fields required except `origin`, `description`, `budgetMin`, `budgetMax`, `files`
+  - Files are optional; if provided, first file = coverPhoto, rest = gallery
 - **Success:** 
   - Show success toast: "Travel plan created successfully"
   - Redirect to `/dashboard/travel-plans/:id` (plan details page)
+  - Response includes `coverPhoto` URL from first uploaded file
 - **Error:** Display error message from `errorMessages` array
   - Field-specific errors: "Start date must be a future date. Past dates are not allowed."
   - "endDate must be greater than or equal to startDate."
   - "Invalid travel type. Must be SOLO, COUPLE, FAMILY, FRIENDS, GROUP."
+  - "Image upload failed: [error message]"
 - **Styling:** Primary button
 
 ---
@@ -2256,7 +2274,11 @@ Same as login page (split or centered)
 **Update Plan:**
 - **Endpoint:** `PATCH /api/v1/travel-plans/:id`
 - **Authentication:** Required (owner or admin only)
-- **Request Body:** All fields optional, only send what you want to update
+- **Content-Type:** `multipart/form-data` (if uploading files) or `application/json` (if no files)
+- **Request Body (FormData if files included):** All fields optional, only send what you want to update
+  - Text fields: `title`, `destination`, `origin`, `startDate`, `endDate`, `travelType`, `budgetMin`, `budgetMax`, `visibility`, `description`
+  - `files[]`: (optional) Up to 10 images; first replaces coverPhoto, rest added to gallery
+- **Example (JSON without files):**
 ```json
 {
   "title": "Updated Plan Title",
@@ -2266,9 +2288,17 @@ Same as login page (split or centered)
   "endDate": "2025-09-26"
 }
 ```
+- **Example (FormData with files):**
+```javascript
+const formData = new FormData();
+formData.append('title', 'Updated Plan Title');
+formData.append('destination', 'Bandarban, Bangladesh');
+files.forEach(file => formData.append('files', file)); // First = coverPhoto
+```
 - **Validation Notes:**
   - If updating `startDate`, it must be a future date
   - `endDate` must be >= `startDate`
+  - If files are uploaded, first file replaces coverPhoto; remaining files are added to gallery/media
   - `planId` and `splitType` cannot be updated (if mentioned elsewhere)
 
 **Delete Plan:**

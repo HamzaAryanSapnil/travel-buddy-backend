@@ -2,6 +2,7 @@ import express from "express";
 import auth from "../../middlewares/auth";
 import optionalAuth from "../../middlewares/optionalAuth";
 import validateRequest from "../../middlewares/validateRequest";
+import { multerUpload } from "../../middlewares/upload";
 import { TravelPlanController } from "./travelPlan.controller";
 import { TravelPlanValidation } from "./travelPlan.validation";
 
@@ -16,6 +17,7 @@ router.get(
 router.post(
     "/",
     auth("USER", "ADMIN"),
+    multerUpload.array("files", 10),
     validateRequest(TravelPlanValidation.createTravelPlan),
     TravelPlanController.createTravelPlan
 );
@@ -37,6 +39,7 @@ router.get(
 router.patch(
     "/:id",
     auth("USER", "ADMIN"),
+    multerUpload.array("files", 10),
     validateRequest(TravelPlanValidation.updateTravelPlan),
     TravelPlanController.updateTravelPlan
 );

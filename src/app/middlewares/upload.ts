@@ -20,4 +20,7 @@ const storage = multer.diskStorage({
 
 export const upload = multer({ storage });
 
+// Multer upload for travel plans (multiple files)
+export const multerUpload = multer({ storage });
+
 

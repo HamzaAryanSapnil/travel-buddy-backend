@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.upload = void 0;
+exports.multerUpload = exports.upload = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const multer_1 = __importDefault(require("multer"));
@@ -22,3 +22,5 @@ const storage = multer_1.default.diskStorage({
     }
 });
 exports.upload = (0, multer_1.default)({ storage });
+// Multer upload for travel plans (multiple files)
+exports.multerUpload = (0, multer_1.default)({ storage });

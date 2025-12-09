@@ -284,22 +284,74 @@
           "name": "Create Travel Plan",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Spring Trip to Cox's Bazar\",\n  \"destination\": \"Cox's Bazar, Bangladesh\",\n  \"origin\": \"Dhaka, Bangladesh\",\n  \"startDate\": \"2025-09-15\",\n  \"endDate\": \"2025-09-21\",\n  \"travelType\": \"FRIENDS\", \n  \"budgetMin\": 5000,\n  \"budgetMax\": 12000,\n  \"visibility\": \"PUBLIC\",\n  \"description\": \"An awesome week-long trip!\",\n  \"coverPhoto\": \"https://my-cloudinary-url/trip-photo.jpg\"\n}"
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Spring Trip to Cox's Bazar",
+                  "type": "text"
+                },
+                {
+                  "key": "destination",
+                  "value": "Cox's Bazar, Bangladesh",
+                  "type": "text"
+                },
+                {
+                  "key": "origin",
+                  "value": "Dhaka, Bangladesh",
+                  "type": "text"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-09-15",
+                  "type": "text"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-09-21",
+                  "type": "text"
+                },
+                {
+                  "key": "travelType",
+                  "value": "FRIENDS",
+                  "type": "text"
+                },
+                {
+                  "key": "budgetMin",
+                  "value": "5000",
+                  "type": "text"
+                },
+                {
+                  "key": "budgetMax",
+                  "value": "12000",
+                  "type": "text"
+                },
+                {
+                  "key": "visibility",
+                  "value": "PUBLIC",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "An awesome week-long trip!",
+                  "type": "text"
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload up to 10 images. First image becomes cover photo, rest are gallery."
+                }
+              ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/travel-plans",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "travel-plans"]
             },
-            "description": "Create a new travel plan. All fields are required except coverPhoto. startDate must be a future date - past dates are not allowed. endDate must be >= startDate. Requires authentication."
+            "description": "Create a new travel plan with multipart/form-data. Supports file uploads: up to 10 images (first = coverPhoto, rest = gallery). Required fields: title, destination, startDate, endDate, travelType, visibility. Optional: origin, budgetMin, budgetMax, description, files[]. startDate must be future date. endDate must be >= startDate. Supported image formats: JPEG, PNG, WebP, GIF, SVG, BMP, TIFF, HEIC, HEIF, ICO. Max 5MB per image. Requires authentication."
           }
         },
         {
@@ -415,22 +467,55 @@
           "name": "Update Travel Plan",
           "request": {
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Updated Plan Title\",\n  \"destination\": \"Bandarban, Bangladesh\",\n  \"origin\": \"Dhaka\",\n  \"startDate\": \"2025-09-20\",\n  \"endDate\": \"2025-09-26\"\n}"
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Updated Plan Title",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "destination",
+                  "value": "Bandarban, Bangladesh",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "origin",
+                  "value": "Dhaka",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-09-20",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-09-26",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload up to 10 images. First image replaces cover photo, rest added to gallery.",
+                  "disabled": true
+                }
+              ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "travel-plans", "{{planId}}"]
             },
-            "description": "Update a travel plan. Only allowed for the plan owner or admins. All fields optional, only send what you want to update. If updating startDate, it must be a future date - past dates are not allowed. This allows converting past plans to future plans. endDate must be >= startDate."
+            "description": "Update a travel plan with multipart/form-data. Only allowed for plan owner or admins. All fields optional, only send what you want to update. Supports file uploads: up to 10 images (first replaces coverPhoto, rest added to gallery). If updating startDate, must be future date. endDate must be >= startDate. Supported image formats: JPEG, PNG, WebP, GIF, SVG, BMP, TIFF, HEIC, HEIF, ICO. Max 5MB per image. Note: Use formdata for file uploads or JSON for text-only updates. Requires authentication."
           }
         },
         {
