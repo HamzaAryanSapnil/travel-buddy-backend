@@ -20,6 +20,14 @@ exports.allowedImageTypes = [
     "image/jpg",
     "image/png",
     "image/webp",
+    "image/gif",
+    "image/svg+xml",
+    "image/bmp",
+    "image/tiff",
+    "image/heic",
+    "image/heif",
+    "image/x-icon",
+    "image/vnd.microsoft.icon",
 ];
 // Maximum file size: 5MB in bytes
 exports.maxFileSize = 5 * 1024 * 1024; // 5MB

@@ -279,7 +279,7 @@ const uploadMedia = async (
   for (const file of files) {
     if (!allowedImageTypes.includes(file.mimetype as any)) {
       invalidFiles.push(
-        `${file.originalname}: Invalid file type. Only JPEG, PNG, and WebP are allowed.`
+        `${file.originalname}: Invalid file type. Supported formats: JPEG, PNG, WebP, GIF, SVG, BMP, TIFF, HEIC, HEIF, ICO.`
       );
     }
     if (file.size > maxFileSize) {

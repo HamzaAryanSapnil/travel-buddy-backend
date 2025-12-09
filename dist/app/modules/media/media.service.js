@@ -197,7 +197,7 @@ const uploadMedia = (authUser, files, payload) => __awaiter(void 0, void 0, void
     const invalidFiles = [];
     for (const file of files) {
         if (!media_constant_1.allowedImageTypes.includes(file.mimetype)) {
-            invalidFiles.push(`${file.originalname}: Invalid file type. Only JPEG, PNG, and WebP are allowed.`);
+            invalidFiles.push(`${file.originalname}: Invalid file type. Supported formats: JPEG, PNG, WebP, GIF, SVG, BMP, TIFF, HEIC, HEIF, ICO.`);
         }
         if (file.size > media_constant_1.maxFileSize) {
             invalidFiles.push(`${file.originalname}: File size exceeds 5MB limit.`);
