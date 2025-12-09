@@ -20,8 +20,14 @@ const createTravelPlanSchema = z.object({
       ),
     endDate: z.string().min(1, { message: "EndDate is required." }),
     travelType: z.enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"]),
-    budgetMin: z.number().optional(),
-    budgetMax: z.number().optional(),
+    budgetMin: z.preprocess(
+      (val) => (val ? Number(val) : undefined),
+      z.number().optional()
+    ),
+    budgetMax: z.preprocess(
+      (val) => (val ? Number(val) : undefined),
+      z.number().optional()
+    ),
     visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
     description: z.string().optional(),
     coverPhoto: z.string().optional(),
@@ -51,8 +57,14 @@ const updateTravelPlanSchema = z.object({
     travelType: z
       .enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"])
       .optional(),
-    budgetMin: z.number().optional(),
-    budgetMax: z.number().optional(),
+    budgetMin: z.preprocess(
+      (val) => (val ? Number(val) : undefined),
+      z.number().optional()
+    ),
+    budgetMax: z.preprocess(
+      (val) => (val ? Number(val) : undefined),
+      z.number().optional()
+    ),
     visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
     description: z.string().optional(),
     coverPhoto: z.string().optional(),
