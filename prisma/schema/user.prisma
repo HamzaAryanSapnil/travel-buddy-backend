@@ -20,6 +20,7 @@ model User {
   // Relations
   travelPlans      TravelPlan[] @relation("PlanOwner")
   tripMembers      TripMember[]
+  tripBookings     TripBooking[]
   invitationsSent Invitation[] @relation("InvFrom")
   invitationsReceived Invitation[] @relation("InvTo")
   meetupsOrganized Meetup[]

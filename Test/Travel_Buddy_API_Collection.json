@@ -2294,7 +2294,117 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "dashboard", "admin", "overview"]
             },
-            "description": "Get admin dashboard overview with system-wide stats (total users, active users, total plans, public plans, total revenue, active subscriptions, total meetups, total expenses), 4 charts (revenue over time - area chart, plans by travel type - bar chart, user growth - line chart, subscription status - pie chart), recent activity, and top performing plans. Requires ADMIN role."
+          "description": "Get admin dashboard overview with system-wide stats (total users, active users, total plans, public plans, total revenue, active subscriptions, total meetups, total expenses, pending booking requests), 4 charts (revenue over time - area chart, plans by travel type - bar chart, user growth - line chart, subscription status - pie chart), recent activity, and top performing plans. Requires ADMIN role."
+        }
+      }
+      ]
+    },
+    {
+      "name": "Trip Bookings",
+      "item": [
+        {
+          "name": "Send Join Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"message\": \"I would love to join this trip! I have experience traveling to similar destinations.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-bookings/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-bookings", "request"]
+            },
+            "description": "Send a join request to a PUBLIC or UNLISTED travel plan. Users can include an optional message with their request. Returns error if plan is PRIVATE, user is already a member, or user already has a pending request for this plan. Requires authentication."
+          }
+        },
+        {
+          "name": "Get My Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-bookings/my-requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-bookings", "my-requests"]
+            },
+            "description": "Get all outgoing join requests made by the authenticated user. Returns requests with status (PENDING, APPROVED, REJECTED) and associated plan details. Ordered by creation date (newest first). Requires authentication."
+          }
+        },
+        {
+          "name": "Get Incoming Requests (Plan Owner)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-bookings/plan/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-bookings", "plan", "{{planId}}"]
+            },
+            "description": "Get all pending join requests for a specific travel plan. Only accessible by plan owner or admins (users with canManageMembers permission). Returns requests with user details (name, email, profile image, bio, interests). Ordered by creation date (oldest first). Requires authentication."
+          }
+        },
+        {
+          "name": "Respond to Request (Approve)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-bookings/{{bookingId}}/respond",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-bookings", "{{bookingId}}", "respond"]
+            },
+            "description": "Approve a join request. User is automatically added as a trip member with VIEWER role and JOINED status. A notification is sent to the requester. Only accessible by plan owner or admins. Requires authentication."
+          }
+        },
+        {
+          "name": "Respond to Request (Reject)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REJECTED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-bookings/{{bookingId}}/respond",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-bookings", "{{bookingId}}", "respond"]
+            },
+            "description": "Reject a join request. Request status is updated to REJECTED and a notification is sent to the requester. Only accessible by plan owner or admins. Requires authentication."
+          }
+        },
+        {
+          "name": "Cancel Request",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trip-bookings/{{bookingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trip-bookings", "{{bookingId}}"]
+            },
+            "description": "Cancel own pending join request. Only the requester can cancel their own request, and only if it is still PENDING. Returns error if request is already approved or rejected. Requires authentication."
           }
         }
       ]

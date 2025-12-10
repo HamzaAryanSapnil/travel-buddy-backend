@@ -1,0 +1,19 @@
+model TripBooking {
+  id        String        @id @default(uuid())
+  planId    String        @map("plan_id")
+  userId    String        @map("user_id")
+  status    BookingStatus @default(PENDING)
+  message   String?       // Optional message from requester
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  plan      TravelPlan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@map("trip_bookings")
+}
+

@@ -20,6 +20,7 @@ model TravelPlan {
   owner         User          @relation("PlanOwner", fields: [ownerId], references: [id])
   itineraryItems ItineraryItem[]
   tripMembers    TripMember[]
+  tripBookings   TripBooking[]
   meetups        Meetup[]
   reviews        Review[]
   media          Media[]

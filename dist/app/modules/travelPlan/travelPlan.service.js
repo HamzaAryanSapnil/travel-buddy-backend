@@ -125,8 +125,8 @@ const createTravelPlan = (authUser, payload, files) => __awaiter(void 0, void 0,
                 origin: payload.origin,
                 startDate,
                 endDate,
-                budgetMin: payload.budgetMin,
-                budgetMax: payload.budgetMax,
+                budgetMin: Number(payload.budgetMin),
+                budgetMax: Number(payload.budgetMax),
                 travelType: payload.travelType,
                 visibility: (_a = payload.visibility) !== null && _a !== void 0 ? _a : client_1.PlanVisibility.PRIVATE,
                 description: payload.description,
@@ -426,9 +426,9 @@ const updateTravelPlan = (authUser, id, payload, files) => __awaiter(void 0, voi
     if (payload.coverPhoto !== undefined && !files)
         data.coverPhoto = payload.coverPhoto;
     if (payload.budgetMin !== undefined)
-        data.budgetMin = payload.budgetMin;
+        data.budgetMin = Number(payload.budgetMin);
     if (payload.budgetMax !== undefined)
-        data.budgetMax = payload.budgetMax;
+        data.budgetMax = Number(payload.budgetMax);
     if (payload.travelType !== undefined) {
         data.travelType = payload.travelType;
     }

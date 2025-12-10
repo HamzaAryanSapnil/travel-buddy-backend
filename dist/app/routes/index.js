@@ -19,6 +19,7 @@ const payment_routes_1 = require("../modules/payment/payment.routes");
 const media_routes_1 = require("../modules/media/media.routes");
 const review_routes_1 = require("../modules/review/review.routes");
 const dashboard_routes_1 = require("../modules/dashboard/dashboard.routes");
+const tripBooking_routes_1 = require("../modules/tripBooking/tripBooking.routes");
 const router = express_1.default.Router();
 const moduleRoutes = [
     {
@@ -36,6 +37,10 @@ const moduleRoutes = [
     {
         path: "/trip-members",
         route: tripMember_routes_1.TripMemberRoutes,
+    },
+    {
+        path: "/trip-bookings",
+        route: tripBooking_routes_1.TripBookingRoutes,
     },
     {
         path: "/itinerary",

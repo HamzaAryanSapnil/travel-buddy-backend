@@ -14,6 +14,7 @@ import { PaymentRoutes } from "../modules/payment/payment.routes";
 import { MediaRoutes } from "../modules/media/media.routes";
 import { ReviewRoutes } from "../modules/review/review.routes";
 import { DashboardRoutes } from "../modules/dashboard/dashboard.routes";
+import { TripBookingRoutes } from "../modules/tripBooking/tripBooking.routes";
 
 const router = express.Router();
 
@@ -33,6 +34,10 @@ const moduleRoutes = [
   {
     path: "/trip-members",
     route: TripMemberRoutes,
+  },
+  {
+    path: "/trip-bookings",
+    route: TripBookingRoutes,
   },
   {
     path: "/itinerary",

@@ -108,3 +108,9 @@ enum ExpenseSplitType {
   PERCENTAGE
 }
 
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+

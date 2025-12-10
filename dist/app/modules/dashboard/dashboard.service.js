@@ -320,6 +320,11 @@ const getAdminOverview = (authUser) => __awaiter(void 0, void 0, void 0, functio
         },
     });
     const totalExpenses = expensesResult._sum.amount || 0;
+    const pendingBookingRequests = yield prisma_1.prisma.tripBooking.count({
+        where: {
+            status: "PENDING",
+        },
+    });
     // Charts
     // 1. Revenue Over Time (Area chart) - Last 6 months
     const paymentsInRange = yield prisma_1.prisma.paymentTransaction.findMany({
@@ -514,6 +519,7 @@ const getAdminOverview = (authUser) => __awaiter(void 0, void 0, void 0, functio
             activeSubscriptions,
             totalMeetups,
             totalExpenses: Math.round(totalExpenses * 100) / 100,
+            pendingBookingRequests,
         },
         charts: {
             revenueOverTime,

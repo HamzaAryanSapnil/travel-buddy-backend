@@ -57,6 +57,7 @@ export type TAdminDashboardOverview = {
     activeSubscriptions: number;
     totalMeetups: number;
     totalExpenses: number;
+    pendingBookingRequests: number;
   };
   charts: {
     revenueOverTime: Array<{

@@ -680,6 +680,27 @@ travel-buddy-frontend/
   - **Text:** "Open in Dashboard"
   - **Links to:** `/dashboard/travel-plans/:id`
   - **Primary button style**
+- **"Request to Join" Button** (if user is NOT a member and plan is PUBLIC or UNLISTED)
+  - **Text:** "Request to Join"
+  - **Icon:** User plus icon
+  - **Action:** Opens join request modal
+  - **Primary button style (with accent color)**
+  - **API:** `POST /api/v1/trip-bookings/request` with body `{ planId, message }`
+  - **Modal Fields:**
+    - Optional message field (textarea, max 500 characters): "Tell the owner why you'd like to join (optional)"
+    - Submit button: "Send Request"
+    - Cancel button
+  - **Success:** Show toast "Join request sent successfully!" and button changes to "Request Pending" (disabled)
+  - **Error Handling:**
+    - Already member: "You are already a member of this plan"
+    - Already requested: "You already have a pending request for this plan"
+    - Private plan: "Cannot request to join a private plan"
+- **"Request Pending" Button** (if user has pending request)
+  - **Text:** "Request Pending"
+  - **Icon:** Clock icon
+  - **State:** Disabled
+  - **Style:** Secondary/muted button
+  - **Tooltip:** "Your join request is awaiting approval"
 - **"Create New Plan" Button** (always available)
   - **Text:** "Create New Plan"
   - **Links to:** `/dashboard/travel-plans/create`
@@ -1458,7 +1479,13 @@ Same as login page (split or centered)
     - **Label:** "Notifications"
     - **Badge:** Unread count (red dot with number)
 
-13. **Profile Settings**
+13. **My Join Requests**
+    - **Icon:** User check icon
+    - **Route:** `/dashboard/my-requests`
+    - **Label:** "My Requests"
+    - **Badge:** Pending request count (if > 0)
+
+14. **Profile Settings**
     - **Icon:** User icon
     - **Route:** `/dashboard/profile`
     - **Label:** "Profile"
@@ -7826,3 +7853,4 @@ OR
 - ✅ Implementation Order - 7-phase plan
 
 **এই roadmap অনুসরণ করে আপনি সম্পূর্ণ frontend application তৈরি করতে পারবেন!** 🚀
+
