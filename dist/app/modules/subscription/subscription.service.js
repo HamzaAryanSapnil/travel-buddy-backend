@@ -1005,22 +1005,61 @@ const syncSubscriptionFromStripe = (authUser, stripeSubscriptionId) => __awaiter
         // Safely convert Stripe timestamps to Date objects
         const periodStart = stripeSubscription.current_period_start;
         const periodEnd = stripeSubscription.current_period_end;
-        if (!periodStart || !periodEnd) {
-            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Subscription does not have valid period dates. Cannot sync.");
+        const created = stripeSubscription.created;
+        console.log(`📅 Stripe subscription dates:`, {
+            current_period_start: periodStart,
+            current_period_end: periodEnd,
+            created: created,
+            status: stripeSubscription.status,
+        });
+        // Handle dates - use created date as fallback if period dates are not available
+        let startedAt;
+        let expiresAt = null;
+        if (periodStart) {
+            startedAt = new Date(periodStart * 1000);
         }
-        const startedAt = new Date(periodStart * 1000);
-        const expiresAt = new Date(periodEnd * 1000);
+        else if (created) {
+            // Fallback to created date if period_start is not available
+            startedAt = new Date(created * 1000);
+            console.log(`⚠️ Using created date as startedAt: ${startedAt.toISOString()}`);
+        }
+        else {
+            // Last resort: use current date
+            startedAt = new Date();
+            console.log(`⚠️ Using current date as startedAt: ${startedAt.toISOString()}`);
+        }
+        if (periodEnd) {
+            expiresAt = new Date(periodEnd * 1000);
+        }
+        else if (periodStart) {
+            // Calculate expiration from period start if period_end is missing
+            expiresAt = calculateExpirationDate(planType, startedAt);
+            console.log(`⚠️ Calculated expiresAt from planType: ${expiresAt.toISOString()}`);
+        }
+        else {
+            // Calculate from startedAt
+            expiresAt = calculateExpirationDate(planType, startedAt);
+            console.log(`⚠️ Calculated expiresAt from startedAt: ${expiresAt.toISOString()}`);
+        }
         // Validate dates
-        if (isNaN(startedAt.getTime()) || isNaN(expiresAt.getTime())) {
-            console.error("Invalid date conversion:", {
+        if (isNaN(startedAt.getTime())) {
+            console.error("Invalid startedAt date conversion:", {
                 periodStart,
-                periodEnd,
+                created,
                 startedAt: startedAt.toString(),
+            });
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Failed to convert subscription start date. Invalid timestamp values.");
+        }
+        if (expiresAt && isNaN(expiresAt.getTime())) {
+            console.error("Invalid expiresAt date conversion:", {
+                periodEnd,
                 expiresAt: expiresAt.toString(),
             });
-            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Failed to convert subscription dates. Invalid timestamp values.");
+            // If expiresAt is invalid, calculate it
+            expiresAt = calculateExpirationDate(planType, startedAt);
+            console.log(`⚠️ Recalculated expiresAt: ${expiresAt.toISOString()}`);
         }
-        console.log(`📅 Subscription dates - Started: ${startedAt.toISOString()}, Expires: ${expiresAt.toISOString()}`);
+        console.log(`📅 Subscription dates - Started: ${startedAt.toISOString()}, Expires: ${(expiresAt === null || expiresAt === void 0 ? void 0 : expiresAt.toISOString()) || 'null'}`);
         // Create or update subscription
         if (!subscription) {
             console.log("📝 Creating new subscription in database...");

@@ -1285,11 +1285,11 @@ const syncSubscriptionFromStripe = async (
       expiresAt = new Date(periodEnd * 1000);
     } else if (periodStart) {
       // Calculate expiration from period start if period_end is missing
-      expiresAt = calculateExpirationDate(planType, startedAt);
+      expiresAt = calculateExpirationDate(planType as "MONTHLY" | "YEARLY", startedAt);
       console.log(`⚠️ Calculated expiresAt from planType: ${expiresAt.toISOString()}`);
     } else {
       // Calculate from startedAt
-      expiresAt = calculateExpirationDate(planType, startedAt);
+      expiresAt = calculateExpirationDate(planType as "MONTHLY" | "YEARLY", startedAt);
       console.log(`⚠️ Calculated expiresAt from startedAt: ${expiresAt.toISOString()}`);
     }
     
@@ -1312,7 +1312,7 @@ const syncSubscriptionFromStripe = async (
         expiresAt: expiresAt.toString(),
       });
       // If expiresAt is invalid, calculate it
-      expiresAt = calculateExpirationDate(planType, startedAt);
+      expiresAt = calculateExpirationDate(planType as "MONTHLY" | "YEARLY", startedAt);
       console.log(`⚠️ Recalculated expiresAt: ${expiresAt.toISOString()}`);
     }
     
