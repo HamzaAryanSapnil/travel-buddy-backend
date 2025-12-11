@@ -1142,30 +1142,119 @@ const handlePaymentFailed = async (
 const handleCheckoutCompleted = async (
   session: Stripe.Checkout.Session
 ): Promise<void> => {
-  // When checkout is completed, Stripe creates the subscription
-  // We should wait for customer.subscription.created event to handle it
-  // But we can verify the session here
+  console.log(`✅ Processing checkout.session.completed for session: ${session.id}`);
+  
+  // Get userId from metadata
+  const userId = session.metadata?.userId;
+  if (!userId) {
+    console.warn("⚠️ Checkout session completed without userId in metadata:", session.id);
+    return;
+  }
+
+  // If payment is paid and we have an invoice, create payment record
+  if (session.payment_status === "paid" && session.invoice) {
+    const invoiceId = typeof session.invoice === 'string' 
+      ? session.invoice 
+      : (session.invoice as any)?.id;
+    
+    if (invoiceId) {
+      console.log(`📄 Retrieving invoice: ${invoiceId}`);
+      
+      try {
+        // Retrieve invoice from Stripe
+        const invoice = await stripe.invoices.retrieve(invoiceId);
+        
+        // Get subscription ID
+        const subscriptionId = typeof invoice.subscription === 'string'
+          ? invoice.subscription
+          : invoice.subscription?.id;
+        
+        if (subscriptionId) {
+          console.log(`🔍 Looking for subscription: ${subscriptionId}`);
+          
+          // Find subscription in database (might not exist yet if events are out of order)
+          let subscription = await prisma.subscription.findUnique({
+            where: { stripeSubscriptionId: subscriptionId },
+          });
+          
+          // If not found, wait a bit and retry (subscription.created might be processing)
+          if (!subscription) {
+            console.log("⏳ Subscription not found, waiting for creation...");
+            for (let i = 0; i < 3; i++) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              subscription = await prisma.subscription.findUnique({
+                where: { stripeSubscriptionId: subscriptionId },
+              });
+              if (subscription) {
+                console.log("✅ Subscription found after retry:", subscription.id);
+                break;
+              }
+            }
+          }
+          
+          // Get payment intent ID
+          const paymentIntentId = typeof invoice.payment_intent === 'string'
+            ? invoice.payment_intent
+            : invoice.payment_intent?.id || null;
+          
+          // Check if payment already exists
+          if (paymentIntentId) {
+            const existingPayment = await prisma.paymentTransaction.findUnique({
+              where: { stripePaymentIntentId: paymentIntentId },
+            });
+            
+            if (existingPayment) {
+              console.log("✅ Payment already exists:", paymentIntentId);
+              return;
+            }
+          }
+          
+          // Create payment record
+          const paymentData: any = {
+            userId,
+            amount: invoice.amount_paid / 100, // Convert from cents
+            currency: invoice.currency.toUpperCase(),
+            stripePaymentIntentId: paymentIntentId,
+            stripeInvoiceId: invoice.id,
+            status: "SUCCESS",
+            gatewayData: invoice as unknown as Prisma.InputJsonValue,
+          };
+          
+          // Add subscriptionId if found
+          if (subscription) {
+            paymentData.subscriptionId = subscription.id;
+          }
+          
+          console.log(`💳 Creating payment record for invoice: ${invoiceId}`);
+          await prisma.paymentTransaction.create({
+            data: paymentData,
+          });
+          
+          console.log(`✅ Payment record created successfully for invoice: ${invoiceId}`);
+        }
+      } catch (error: any) {
+        console.error("❌ Error processing invoice from checkout session:", error);
+        // Don't throw - let other webhooks handle it
+      }
+    }
+  }
+  
+  // Also verify subscription exists (will be created by customer.subscription.created if not)
   if (session.subscription) {
     const subscriptionId = session.subscription as string;
     
-    // Retrieve the subscription from Stripe to get full details
     try {
-      const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
-      
-      // Check if subscription already exists in our database
       const existing = await prisma.subscription.findUnique({
         where: { stripeSubscriptionId: subscriptionId },
       });
 
       if (!existing) {
-        // If subscription doesn't exist yet, it will be created by customer.subscription.created webhook
-        // But we can log it here for debugging
-        console.log("Checkout completed, subscription will be created via webhook:", subscriptionId);
+        console.log("ℹ️ Subscription will be created via customer.subscription.created webhook:", subscriptionId);
       } else {
-        console.log("Checkout completed for existing subscription:", existing.id);
+        console.log("✅ Subscription already exists:", existing.id);
       }
     } catch (error: any) {
-      console.error("Error retrieving subscription from checkout session:", error);
+      console.error("Error checking subscription:", error);
     }
   }
 };
