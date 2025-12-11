@@ -22,6 +22,8 @@ router.get("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.d
 router.patch("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(subscription_validation_1.SubscriptionValidation.updateSubscription), subscription_controller_1.SubscriptionController.updateSubscription);
 // Cancel subscription
 router.delete("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(subscription_validation_1.SubscriptionValidation.cancelSubscription), subscription_controller_1.SubscriptionController.cancelSubscription);
+// Sync subscription from Stripe (manual sync - for missing webhook data)
+router.post("/sync/:stripeSubscriptionId", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(subscription_validation_1.SubscriptionValidation.syncSubscription), subscription_controller_1.SubscriptionController.syncSubscription);
 // Stripe webhook endpoint (no auth, raw body required)
 router.post("/webhook", express_1.default.raw({ type: "application/json" }), // Raw body middleware for Stripe signature verification
 (req, res, next) => {

@@ -24,17 +24,18 @@ const createItem = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
         statusCode: http_status_1.default.CREATED,
         success: true,
         message: "Itinerary item created successfully.",
-        data: result
+        data: result,
     });
 }));
 const getPlanItems = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
     const result = yield itinerary_service_1.ItineraryService.getPlanItems(authUser, req.params.planId, Object.assign({ planId: req.params.planId }, req.query));
+    console.log("result from itinerary route '/itinerary' getPlanItems: ", result);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
         message: "Itinerary items retrieved successfully.",
-        data: result
+        data: result,
     });
 }));
 const getSingleItem = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -44,7 +45,7 @@ const getSingleItem = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
         statusCode: http_status_1.default.OK,
         success: true,
         message: "Itinerary item retrieved successfully.",
-        data: result
+        data: result,
     });
 }));
 const updateItem = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -54,7 +55,7 @@ const updateItem = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
         statusCode: http_status_1.default.OK,
         success: true,
         message: "Itinerary item updated successfully.",
-        data: result
+        data: result,
     });
 }));
 const deleteItem = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -64,7 +65,7 @@ const deleteItem = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
         statusCode: http_status_1.default.OK,
         success: true,
         message: "Itinerary item deleted successfully.",
-        data: null
+        data: null,
     });
 }));
 const bulkUpsert = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -74,7 +75,7 @@ const bulkUpsert = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
         statusCode: http_status_1.default.OK,
         success: true,
         message: "Itinerary items bulk updated successfully.",
-        data: result
+        data: result,
     });
 }));
 const reorderItems = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -84,7 +85,7 @@ const reorderItems = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
         statusCode: http_status_1.default.OK,
         success: true,
         message: "Itinerary items reordered successfully.",
-        data: result
+        data: result,
     });
 }));
 exports.ItineraryController = {
@@ -94,5 +95,5 @@ exports.ItineraryController = {
     updateItem,
     deleteItem,
     bulkUpsert,
-    reorderItems
+    reorderItems,
 };

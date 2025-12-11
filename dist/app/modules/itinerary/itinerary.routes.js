@@ -14,10 +14,10 @@ const router = express_1.default.Router();
 router.post("/", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.createItem), itinerary_controller_1.ItineraryController.createItem);
 // Get all items for a plan (grouped by day)
 // Note: For PUBLIC plans, this can be accessed without auth
-router.get("/:planId", (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.getItems), itinerary_controller_1.ItineraryController.getPlanItems);
+router.get("/:planId", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.getItems), itinerary_controller_1.ItineraryController.getPlanItems);
 // Get single item
 // Note: For PUBLIC plans, this can be accessed without auth
-router.get("/item/:id", (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.getSingleItem), itinerary_controller_1.ItineraryController.getSingleItem);
+router.get("/item/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.getSingleItem), itinerary_controller_1.ItineraryController.getSingleItem);
 // Bulk upsert (for AI Planner) - Specific route, must be before dynamic routes
 router.post("/bulk", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(itinerary_validation_1.ItineraryValidation.bulkUpsert), itinerary_controller_1.ItineraryController.bulkUpsert);
 // Reorder items - Specific route, MUST be before /:id route

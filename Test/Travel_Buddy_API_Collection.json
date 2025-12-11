@@ -1591,6 +1591,19 @@
           }
         },
         {
+          "name": "Sync Subscription from Stripe",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subscriptions/sync/{{stripeSubscriptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "subscriptions", "sync", "{{stripeSubscriptionId}}"]
+            },
+            "description": "Manually sync subscription and payment data from Stripe. Useful when webhook events are missed or failed. Fetches subscription and all invoices from Stripe and creates/updates records in database. stripeSubscriptionId is the Stripe subscription ID (e.g., sub_xxxxx). Requires authentication. User must be admin or subscription owner."
+          }
+        },
+        {
           "name": "Subscription History (Admin)",
           "request": {
             "method": "GET",

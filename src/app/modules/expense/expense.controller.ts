@@ -6,7 +6,9 @@ import { TAuthUser } from "./expense.interface";
 
 const createExpense = catchAsync(async (req, res) => {
   const authUser = req.user as TAuthUser;
+  console.log("Req.body from expense controller '/expense' createExpense: ", req.body);
   const result = await ExpenseService.createExpense(authUser, req.body);
+
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,

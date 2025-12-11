@@ -23,7 +23,7 @@ const createSubscription = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
-    message: "Subscription created successfully.",
+    message: "Checkout session created successfully. Redirect user to the provided URL.",
     data: result,
   });
 });
@@ -117,6 +117,24 @@ const handleWebhook = catchAsync(async (req, res) => {
   });
 });
 
+// Sync subscription from Stripe (manual sync)
+const syncSubscription = catchAsync(async (req, res) => {
+  const authUser = req.user as TAuthUser;
+  const stripeSubscriptionId = req.params.stripeSubscriptionId;
+
+  const result = await SubscriptionService.syncSubscriptionFromStripe(
+    authUser,
+    stripeSubscriptionId
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: result.message,
+    data: result,
+  });
+});
+
 export const SubscriptionController = {
   getSubscriptionStatus,
   createSubscription,
@@ -125,5 +143,6 @@ export const SubscriptionController = {
   updateSubscription,
   cancelSubscription,
   handleWebhook,
+  syncSubscription,
 };
 

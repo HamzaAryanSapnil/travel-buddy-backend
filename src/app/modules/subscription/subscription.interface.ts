@@ -77,3 +77,9 @@ export type TStripeWebhookPayload = {
   };
 };
 
+export type TCheckoutSessionResponse = {
+  sessionId: string;
+  url: string;
+  customerId: string;
+};
+

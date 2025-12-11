@@ -54,6 +54,14 @@ router.delete(
   SubscriptionController.cancelSubscription
 );
 
+// Sync subscription from Stripe (manual sync - for missing webhook data)
+router.post(
+  "/sync/:stripeSubscriptionId",
+  auth("USER", "ADMIN"),
+  validateRequest(SubscriptionValidation.syncSubscription),
+  SubscriptionController.syncSubscription
+);
+
 // Stripe webhook endpoint (no auth, raw body required)
 router.post(
   "/webhook",

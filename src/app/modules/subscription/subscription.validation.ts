@@ -78,6 +78,12 @@ const stripeWebhookSchema = z.object({
   // Body will be raw buffer, validated in service
 });
 
+const syncSubscriptionSchema = z.object({
+  params: z.object({
+    stripeSubscriptionId: stringRequired("Stripe subscription ID is required."),
+  }),
+});
+
 export const SubscriptionValidation = {
   createSubscription: createSubscriptionSchema,
   getSubscription: getSubscriptionSchema,
@@ -86,5 +92,6 @@ export const SubscriptionValidation = {
   cancelSubscription: cancelSubscriptionSchema,
   getSubscriptionStatus: getSubscriptionStatusSchema,
   stripeWebhook: stripeWebhookSchema,
+  syncSubscription: syncSubscriptionSchema,
 };
 

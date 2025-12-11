@@ -14,6 +14,7 @@ import {
   subscriptionFilterableFields,
   SUBSCRIPTION_PLANS,
 } from "./subscription.constant";
+import config from "../../../config";
 import {
   TAuthUser,
   TSubscriptionCreatePayload,
@@ -22,6 +23,7 @@ import {
   TSubscriptionResponse,
   TSubscriptionListResponse,
   TSubscriptionStatusResponse,
+  TCheckoutSessionResponse,
 } from "./subscription.interface";
 
 /**
@@ -322,15 +324,15 @@ const getSubscriptions = async (
 };
 
 /**
- * Create a new subscription
+ * Create a new subscription checkout session
  * @param authUser - Authenticated user
  * @param payload - Subscription creation payload
- * @returns Created subscription
+ * @returns Checkout session URL
  */
 const createSubscription = async (
   authUser: TAuthUser,
   payload: TSubscriptionCreatePayload
-): Promise<TSubscriptionResponse> => {
+): Promise<TCheckoutSessionResponse> => {
   // Check if user already has an active subscription
   const existingSubscription = await prisma.subscription.findFirst({
     where: {
@@ -373,100 +375,56 @@ const createSubscription = async (
     authUser.email
   );
 
-  // Create Stripe subscription
-  let stripeSubscription;
+  // Get frontend URL for success/cancel redirects
+  const frontendUrl = config.frontend_url || "http://localhost:3000";
+  const successUrl = `${frontendUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${frontendUrl}/subscription/cancel`;
+
+  // Create Stripe Checkout Session
+  let checkoutSession: Stripe.Checkout.Session;
   try {
-    stripeSubscription = await stripe.subscriptions.create({
+    checkoutSession = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
-      items: [
+      mode: "subscription",
+      line_items: [
         {
           price: planConfig.priceId,
+          quantity: 1,
         },
       ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         userId: authUser.userId,
         planType: payload.planType,
       },
+      subscription_data: {
+        metadata: {
+          userId: authUser.userId,
+          planType: payload.planType,
+        },
+      },
+      allow_promotion_codes: true,
     });
   } catch (error: any) {
-    console.error("Stripe subscription creation error:", error);
+    console.error("Stripe checkout session creation error:", error);
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      `Failed to create subscription: ${error.message || "Unknown error"}`
+      `Failed to create checkout session: ${error.message || "Unknown error"}`
     );
   }
 
-  // Calculate expiration date
-  const startedAt = new Date();
-  const expiresAt = calculateExpirationDate(payload.planType, startedAt);
+  if (!checkoutSession.url) {
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      "Failed to generate checkout session URL"
+    );
+  }
 
-  // Create subscription in database (transaction)
-  const subscription = await prisma.$transaction(async (tx) => {
-    // Store customer ID in metadata for future reference
-    const metadata = {
-      stripeCustomerId,
-      planType: payload.planType,
-    };
-
-    const newSubscription = await tx.subscription.create({
-      data: {
-        userId: authUser.userId,
-        planName: planConfig.name,
-        planType: payload.planType,
-        status: SubscriptionStatus.ACTIVE,
-        stripeSubscriptionId: stripeSubscription.id,
-        startedAt,
-        expiresAt,
-        cancelAtPeriodEnd: false,
-        metadata: metadata as Prisma.InputJsonValue,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            profileImage: true,
-          },
-        },
-      },
-    });
-
-    return newSubscription;
-  });
-
-  // Notify user (SUBSCRIPTION_CREATED)
-  NotificationService.notifyUser(
-    authUser.userId,
-    {
-      type: NotificationType.SUBSCRIPTION_CREATED,
-      title: "Subscription created successfully",
-      message: `Your ${planConfig.name} subscription has been activated. You now have unlimited AI access!`,
-      data: {
-        subscriptionId: subscription.id,
-        planType: payload.planType,
-        expiresAt: expiresAt.toISOString(),
-      },
-    }
-  ).catch((error) => {
-    console.error("Failed to send notification for subscription creation:", error);
-  });
-
-  const sub = subscription as any;
   return {
-    id: sub.id,
-    userId: sub.userId,
-    planName: sub.planName,
-    planType: sub.planType,
-    status: sub.status,
-    stripeSubscriptionId: sub.stripeSubscriptionId,
-    startedAt: sub.startedAt,
-    expiresAt: sub.expiresAt,
-    cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
-    metadata: sub.metadata,
-    createdAt: sub.createdAt,
-    updatedAt: sub.updatedAt,
-    user: sub.user,
+    sessionId: checkoutSession.id,
+    url: checkoutSession.url,
+    customerId: stripeCustomerId,
   };
 };
 
@@ -692,6 +650,8 @@ const handleStripeWebhook = async (
   const webhookSecret = getWebhookSecret();
   let event: Stripe.Event;
 
+  console.log("🔔 Webhook received - Verifying signature...");
+
   try {
     // Verify webhook signature
     event = stripe.webhooks.constructEvent(
@@ -699,8 +659,9 @@ const handleStripeWebhook = async (
       signature,
       webhookSecret
     );
+    console.log(`✅ Webhook verified - Event Type: ${event.type}, Event ID: ${event.id}`);
   } catch (error: any) {
-    console.error("Webhook signature verification failed:", error.message);
+    console.error("❌ Webhook signature verification failed:", error.message);
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       `Webhook signature verification failed: ${error.message}`
@@ -709,38 +670,61 @@ const handleStripeWebhook = async (
 
   // Handle different event types
   try {
+    console.log(`📥 Processing webhook event: ${event.type}`);
+    const startTime = Date.now();
+
     switch (event.type) {
       case "customer.subscription.created":
+        console.log("🆕 Handling subscription.created event...");
         await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
+        console.log("✅ Subscription created successfully");
         break;
 
       case "customer.subscription.updated":
+        console.log("🔄 Handling subscription.updated event...");
         await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        console.log("✅ Subscription updated successfully");
         break;
 
       case "customer.subscription.deleted":
+        console.log("🗑️ Handling subscription.deleted event...");
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        console.log("✅ Subscription deleted successfully");
         break;
 
       case "invoice.payment_succeeded":
+        console.log("💳 Handling invoice.payment_succeeded event...");
         await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
+        console.log("✅ Payment processed successfully");
         break;
 
       case "invoice.payment_failed":
+        console.log("❌ Handling invoice.payment_failed event...");
         await handlePaymentFailed(event.data.object as Stripe.Invoice);
+        console.log("✅ Payment failure processed successfully");
         break;
 
       case "checkout.session.completed":
+        console.log("✅ Handling checkout.session.completed event...");
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        console.log("✅ Checkout completed processed successfully");
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        console.log(`⚠️ Unhandled event type: ${event.type}`);
     }
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ Webhook event ${event.type} processed in ${duration}ms`);
 
     return { received: true };
   } catch (error: any) {
-    console.error(`Error handling webhook event ${event.type}:`, error);
+    console.error(`❌ Error handling webhook event ${event.type}:`, {
+      error: error.message,
+      stack: error.stack,
+      eventId: event.id,
+      eventType: event.type,
+    });
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       `Failed to process webhook: ${error.message}`
@@ -754,11 +738,14 @@ const handleStripeWebhook = async (
 const handleSubscriptionCreated = async (
   stripeSubscription: Stripe.Subscription
 ): Promise<void> => {
+  console.log(`🆕 Processing subscription.created for: ${stripeSubscription.id}`);
   const userId = stripeSubscription.metadata?.userId;
   if (!userId) {
-    console.warn("Subscription created without userId in metadata:", stripeSubscription.id);
+    console.warn("⚠️ Subscription created without userId in metadata:", stripeSubscription.id);
     return;
   }
+
+  console.log(`👤 User ID: ${userId}`);
 
   // Check if subscription already exists
   const existing = await prisma.subscription.findUnique({
@@ -766,7 +753,7 @@ const handleSubscriptionCreated = async (
   });
 
   if (existing) {
-    console.log("Subscription already exists:", stripeSubscription.id);
+    console.log(`✅ Subscription already exists in database: ${stripeSubscription.id}`);
     return;
   }
 
@@ -779,7 +766,8 @@ const handleSubscriptionCreated = async (
   const expiresAt = new Date((stripeSubscription as any).current_period_end * 1000);
 
   // Create subscription in database
-  await prisma.subscription.create({
+  console.log(`💾 Creating subscription in database...`);
+  const subscription = await prisma.subscription.create({
     data: {
       userId,
       planName: planConfig.name,
@@ -794,6 +782,60 @@ const handleSubscriptionCreated = async (
         planType,
       } as Prisma.InputJsonValue,
     },
+  });
+  console.log(`✅ Subscription created in database: ${subscription.id}`);
+
+  // Update any payments that were created without subscriptionId
+  // This handles the case when invoice.payment_succeeded arrives before customer.subscription.created
+  try {
+    // First, try to update payments with userId and pendingSubscriptionId
+    const pendingPayments = await prisma.paymentTransaction.findMany({
+      where: {
+        OR: [
+          { userId, subscriptionId: null },
+          { userId: null, subscriptionId: null }, // Also check null userId payments
+        ],
+      },
+    });
+
+    let updatedCount = 0;
+    for (const payment of pendingPayments) {
+      const gatewayData = payment.gatewayData as any;
+      if (gatewayData?.pendingSubscriptionId === stripeSubscription.id) {
+        await prisma.paymentTransaction.update({
+          where: { id: payment.id },
+          data: {
+            subscriptionId: subscription.id,
+            userId: payment.userId || userId, // Update userId if it was null
+          },
+        });
+        updatedCount++;
+        console.log(`Updated payment ${payment.id} with subscription ID:`, subscription.id);
+      }
+    }
+
+    if (updatedCount > 0) {
+      console.log(`Updated ${updatedCount} payment(s) with subscription ID:`, subscription.id);
+    }
+  } catch (error) {
+    console.error("Error updating pending payments:", error);
+  }
+
+  // Notify user (SUBSCRIPTION_CREATED)
+  NotificationService.notifyUser(
+    userId,
+    {
+      type: NotificationType.SUBSCRIPTION_CREATED,
+      title: "Subscription created successfully",
+      message: `Your ${planConfig.name} subscription has been activated. You now have unlimited AI access!`,
+      data: {
+        subscriptionId: subscription.id,
+        planType: planType,
+        expiresAt: expiresAt.toISOString(),
+      },
+    }
+  ).catch((error) => {
+    console.error("Failed to send notification for subscription creation:", error);
   });
 };
 
@@ -865,39 +907,153 @@ const handleSubscriptionDeleted = async (
 const handlePaymentSucceeded = async (
   invoice: Stripe.Invoice
 ): Promise<void> => {
+  console.log(`💳 Processing payment succeeded for invoice: ${invoice.id}`);
   const inv = invoice as any;
   const subscriptionId = typeof inv.subscription === 'string' 
     ? inv.subscription 
     : inv.subscription?.id;
   
   if (!subscriptionId) {
-    // Not a subscription invoice
+    console.log("⚠️ Invoice is not a subscription invoice, skipping...");
     return;
   }
 
-  const subscription = await prisma.subscription.findUnique({
+  console.log(`📋 Subscription ID: ${subscriptionId}, Invoice ID: ${invoice.id}`);
+
+  // Get payment intent ID
+  const paymentIntentId = typeof inv.payment_intent === 'string' 
+    ? inv.payment_intent 
+    : inv.payment_intent?.id || null;
+
+  console.log(`💳 Payment Intent ID: ${paymentIntentId || 'N/A'}`);
+
+  // Check if payment already exists (avoid duplicates)
+  if (paymentIntentId) {
+    const existingPayment = await prisma.paymentTransaction.findUnique({
+      where: { stripePaymentIntentId: paymentIntentId },
+    });
+    
+    if (existingPayment) {
+      console.log(`✅ Payment already exists in database: ${paymentIntentId}`);
+      return; // Already processed
+    }
+  }
+
+  // Try to find subscription - with retry logic (webhook events might arrive out of order)
+  let subscription = await prisma.subscription.findUnique({
     where: { stripeSubscriptionId: subscriptionId },
   });
 
+  // If subscription doesn't exist yet, wait a bit and retry
   if (!subscription) {
-    console.warn("Subscription not found for payment:", subscriptionId);
+    console.log("Subscription not found, waiting for subscription creation...", subscriptionId);
+    
+    // Retry up to 3 times with 2 second delay
+    for (let i = 0; i < 3; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      subscription = await prisma.subscription.findUnique({
+        where: { stripeSubscriptionId: subscriptionId },
+      });
+      
+      if (subscription) {
+        console.log("Subscription found after retry:", subscription.id);
+        break;
+      }
+    }
+  }
+
+  // If still not found, try to get userId from invoice/customer metadata
+  if (!subscription) {
+    console.warn("Subscription not found after retries, attempting to create payment with metadata:", subscriptionId);
+    
+    let userId: string | null = null;
+    
+    try {
+      // Try to get from invoice metadata
+      if (invoice.metadata?.userId) {
+        userId = invoice.metadata.userId;
+      } else if (invoice.customer) {
+        // Try to get from customer
+        const customer = await stripe.customers.retrieve(invoice.customer as string);
+        // Check if customer is deleted or has metadata
+        if (!customer.deleted && 'metadata' in customer && customer.metadata?.userId) {
+          userId = customer.metadata.userId;
+        }
+      }
+    } catch (error) {
+      console.error("Error retrieving customer for payment:", error);
+    }
+
+    if (!userId) {
+      console.error("Cannot create payment: userId not found in invoice or customer metadata");
+      // Store in gatewayData for later processing
+      await prisma.paymentTransaction.create({
+        data: {
+          userId: null, // Will be updated later
+          subscriptionId: null,
+          amount: invoice.amount_paid / 100,
+          currency: invoice.currency.toUpperCase(),
+          stripePaymentIntentId: paymentIntentId,
+          status: "SUCCEEDED",
+          gatewayData: {
+            ...(invoice as unknown as object),
+            pendingSubscriptionId: subscriptionId,
+            needsUpdate: true,
+          } as Prisma.InputJsonValue,
+        },
+      });
+      return;
+    }
+
+    // Create payment with subscriptionId as null (will be updated when subscription is created)
+    await prisma.paymentTransaction.create({
+      data: {
+        userId,
+        subscriptionId: null, // Will be updated when subscription is created
+        amount: invoice.amount_paid / 100,
+        currency: invoice.currency.toUpperCase(),
+        stripePaymentIntentId: paymentIntentId,
+        status: "SUCCEEDED",
+        gatewayData: {
+          ...(invoice as unknown as object),
+          pendingSubscriptionId: subscriptionId, // Store for later update
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    // Try to notify user if we have userId
+    NotificationService.notifyUser(
+      userId,
+      {
+        type: NotificationType.PAYMENT_SUCCEEDED,
+        title: "Payment successful",
+        message: `Your subscription payment of ${invoice.currency.toUpperCase()} ${(invoice.amount_paid / 100).toFixed(2)} was processed successfully.`,
+        data: {
+          invoiceId: invoice.id,
+        },
+      }
+    ).catch((error) => {
+      console.error("Failed to send payment notification:", error);
+    });
+
     return;
   }
 
   // Create payment transaction record
-  await prisma.paymentTransaction.create({
+  console.log(`💾 Creating payment transaction for subscription: ${subscription.id}`);
+  const payment = await prisma.paymentTransaction.create({
     data: {
       userId: subscription.userId,
       subscriptionId: subscription.id,
       amount: invoice.amount_paid / 100, // Convert from cents
       currency: invoice.currency.toUpperCase(),
-      stripePaymentIntentId: typeof inv.payment_intent === 'string' 
-        ? inv.payment_intent 
-        : inv.payment_intent?.id || null,
+      stripePaymentIntentId: paymentIntentId,
       status: "SUCCEEDED",
       gatewayData: (invoice as unknown) as Prisma.InputJsonValue,
     },
   });
+
+  console.log(`✅ Payment transaction created successfully: ${payment.id}, Amount: ${payment.amount} ${payment.currency}`);
 
   // Notify user (PAYMENT_SUCCEEDED)
   NotificationService.notifyUser(
@@ -912,7 +1068,7 @@ const handlePaymentSucceeded = async (
       },
     }
   ).catch((error) => {
-    console.error("Failed to send payment notification:", error);
+    console.error("❌ Failed to send payment notification:", error);
   });
 };
 
@@ -986,16 +1142,309 @@ const handlePaymentFailed = async (
 const handleCheckoutCompleted = async (
   session: Stripe.Checkout.Session
 ): Promise<void> => {
-  // This event is typically handled by subscription.created/updated
-  // But we can use it to verify subscription was created
+  // When checkout is completed, Stripe creates the subscription
+  // We should wait for customer.subscription.created event to handle it
+  // But we can verify the session here
   if (session.subscription) {
-    const subscription = await prisma.subscription.findUnique({
-      where: { stripeSubscriptionId: session.subscription as string },
+    const subscriptionId = session.subscription as string;
+    
+    // Retrieve the subscription from Stripe to get full details
+    try {
+      const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      // Check if subscription already exists in our database
+      const existing = await prisma.subscription.findUnique({
+        where: { stripeSubscriptionId: subscriptionId },
+      });
+
+      if (!existing) {
+        // If subscription doesn't exist yet, it will be created by customer.subscription.created webhook
+        // But we can log it here for debugging
+        console.log("Checkout completed, subscription will be created via webhook:", subscriptionId);
+      } else {
+        console.log("Checkout completed for existing subscription:", existing.id);
+      }
+    } catch (error: any) {
+      console.error("Error retrieving subscription from checkout session:", error);
+    }
+  }
+};
+
+/**
+ * Manually sync subscription and payment data from Stripe
+ * Useful when webhook events are missed or failed
+ * @param authUser - Authenticated user (must be admin or subscription owner)
+ * @param stripeSubscriptionId - Stripe subscription ID
+ * @returns Sync result with counts
+ */
+const syncSubscriptionFromStripe = async (
+  authUser: TAuthUser,
+  stripeSubscriptionId: string
+): Promise<{
+  subscription: TSubscriptionResponse | null;
+  paymentsCreated: number;
+  paymentsUpdated: number;
+  message: string;
+}> => {
+  console.log(`🔄 Starting manual sync for subscription: ${stripeSubscriptionId}`);
+
+  // Validate and sanitize Stripe subscription ID
+  // Stripe subscription IDs start with "sub_" and contain only alphanumeric characters and underscores
+  // Decode URL encoding if present
+  let sanitizedId = decodeURIComponent(stripeSubscriptionId).trim();
+  
+  // Remove any whitespace or control characters
+  sanitizedId = sanitizedId.replace(/[\s\r\n\t]/g, '');
+  
+  if (!sanitizedId || !sanitizedId.startsWith('sub_')) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Invalid Stripe subscription ID format. Must start with 'sub_'. Received: ${stripeSubscriptionId}`
+    );
+  }
+
+  // Validate format: sub_ followed by alphanumeric and underscores only
+  if (!/^sub_[a-zA-Z0-9_]+$/.test(sanitizedId)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Invalid Stripe subscription ID format. Contains invalid characters. Received: ${stripeSubscriptionId}`
+    );
+  }
+  
+  console.log(`🔍 Sanitized subscription ID: ${sanitizedId} (original: ${stripeSubscriptionId})`);
+
+  try {
+    // Fetch subscription from Stripe
+    console.log(`📡 Calling Stripe API to retrieve subscription: ${sanitizedId}`);
+    const stripeSubscription = await stripe.subscriptions.retrieve(sanitizedId);
+    console.log(`✅ Fetched subscription from Stripe: ${stripeSubscription.id}`);
+
+    const userId = stripeSubscription.metadata?.userId;
+    if (!userId) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Subscription does not have userId in metadata. Cannot sync."
+      );
+    }
+
+    // Verify user has permission (admin or subscription owner)
+    if (authUser.role !== "ADMIN" && authUser.userId !== userId) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        "You don't have permission to sync this subscription."
+      );
+    }
+
+    // Check if subscription exists in database
+    let subscription = await prisma.subscription.findUnique({
+      where: { stripeSubscriptionId: stripeSubscription.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            profileImage: true,
+          },
+        },
+      },
     });
 
-    if (subscription) {
-      console.log("Checkout completed for subscription:", subscription.id);
+    const planType = stripeSubscription.metadata?.planType || "MONTHLY";
+    const planConfig = SUBSCRIPTION_PLANS[planType as "MONTHLY" | "YEARLY"] || SUBSCRIPTION_PLANS.MONTHLY;
+    
+    // Safely convert Stripe timestamps to Date objects
+    const periodStart = (stripeSubscription as any).current_period_start;
+    const periodEnd = (stripeSubscription as any).current_period_end;
+    
+    if (!periodStart || !periodEnd) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Subscription does not have valid period dates. Cannot sync."
+      );
     }
+    
+    const startedAt = new Date(periodStart * 1000);
+    const expiresAt = new Date(periodEnd * 1000);
+    
+    // Validate dates
+    if (isNaN(startedAt.getTime()) || isNaN(expiresAt.getTime())) {
+      console.error("Invalid date conversion:", {
+        periodStart,
+        periodEnd,
+        startedAt: startedAt.toString(),
+        expiresAt: expiresAt.toString(),
+      });
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Failed to convert subscription dates. Invalid timestamp values."
+      );
+    }
+    
+    console.log(`📅 Subscription dates - Started: ${startedAt.toISOString()}, Expires: ${expiresAt.toISOString()}`);
+
+    // Create or update subscription
+    if (!subscription) {
+      console.log("📝 Creating new subscription in database...");
+      subscription = await prisma.subscription.create({
+        data: {
+          userId,
+          planName: planConfig.name,
+          planType: planType as string,
+          status: stripeSubscription.status === "active" ? SubscriptionStatus.ACTIVE : SubscriptionStatus.PAST_DUE,
+          stripeSubscriptionId: stripeSubscription.id,
+          startedAt,
+          expiresAt,
+          cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end || false,
+          metadata: {
+            stripeCustomerId: stripeSubscription.customer as string,
+            planType,
+          } as Prisma.InputJsonValue,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              profileImage: true,
+            },
+          },
+        },
+      });
+      console.log(`✅ Subscription created: ${subscription.id}`);
+    } else {
+      console.log("🔄 Updating existing subscription...");
+      subscription = await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          status: stripeSubscription.status === "active" ? SubscriptionStatus.ACTIVE : SubscriptionStatus.PAST_DUE,
+          expiresAt,
+          cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end || false,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              profileImage: true,
+            },
+          },
+        },
+      });
+      console.log(`✅ Subscription updated: ${subscription.id}`);
+    }
+
+    // Fetch invoices from Stripe
+    console.log(`📋 Fetching invoices from Stripe for subscription: ${stripeSubscription.id}`);
+    const invoices = await stripe.invoices.list({
+      subscription: stripeSubscription.id,
+      limit: 100, // Get up to 100 invoices
+    });
+
+    console.log(`📋 Found ${invoices.data.length} invoice(s)`);
+
+    let paymentsCreated = 0;
+    let paymentsUpdated = 0;
+
+    // Process each invoice
+    for (const invoice of invoices.data) {
+      const inv = invoice as any;
+      const paymentIntentId = typeof inv.payment_intent === 'string'
+        ? inv.payment_intent
+        : inv.payment_intent?.id || null;
+
+      if (invoice.status !== "paid" || !paymentIntentId) {
+        continue; // Skip unpaid invoices or invoices without payment intent
+      }
+
+      // Check if payment already exists
+      const existingPayment = await prisma.paymentTransaction.findUnique({
+        where: { stripePaymentIntentId: paymentIntentId },
+      });
+
+      if (existingPayment) {
+        // Update if needed
+        if (existingPayment.subscriptionId !== subscription.id || existingPayment.userId !== userId) {
+          await prisma.paymentTransaction.update({
+            where: { id: existingPayment.id },
+            data: {
+              subscriptionId: subscription.id,
+              userId: userId,
+            },
+          });
+          paymentsUpdated++;
+          console.log(`🔄 Updated payment: ${existingPayment.id}`);
+        }
+        continue;
+      }
+
+      // Create new payment
+      await prisma.paymentTransaction.create({
+        data: {
+          userId,
+          subscriptionId: subscription.id,
+          amount: invoice.amount_paid / 100,
+          currency: invoice.currency.toUpperCase(),
+          stripePaymentIntentId: paymentIntentId,
+          status: "SUCCEEDED",
+          gatewayData: (invoice as unknown) as Prisma.InputJsonValue,
+        },
+      });
+      paymentsCreated++;
+      console.log(`✅ Created payment for invoice: ${invoice.id}`);
+    }
+
+    const sub = subscription as any;
+    const subscriptionResponse: TSubscriptionResponse = {
+      id: sub.id,
+      userId: sub.userId,
+      planName: sub.planName,
+      planType: sub.planType,
+      status: sub.status,
+      stripeSubscriptionId: sub.stripeSubscriptionId,
+      startedAt: sub.startedAt,
+      expiresAt: sub.expiresAt,
+      cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+      metadata: sub.metadata,
+      createdAt: sub.createdAt,
+      updatedAt: sub.updatedAt,
+      user: sub.user,
+    };
+
+    console.log(`✅ Sync completed - Created: ${paymentsCreated}, Updated: ${paymentsUpdated}`);
+
+    return {
+      subscription: subscriptionResponse,
+      paymentsCreated,
+      paymentsUpdated,
+      message: `Sync completed successfully. Created ${paymentsCreated} payment(s), updated ${paymentsUpdated} payment(s).`,
+    };
+  } catch (error: any) {
+    console.error(`❌ Sync failed for subscription ${stripeSubscriptionId}:`, {
+      error: error.message,
+      type: error.type,
+      code: error.code,
+      stack: error.stack,
+    });
+    
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
+    // Handle Stripe-specific errors
+    if (error.type === 'StripeInvalidRequestError' || error.type === 'StripeAPIError') {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `Stripe API error: ${error.message}`
+      );
+    }
+    
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      `Failed to sync subscription: ${error.message}`
+    );
   }
 };
 
@@ -1007,6 +1456,7 @@ export const SubscriptionService = {
   updateSubscription,
   cancelSubscription,
   handleStripeWebhook,
+  syncSubscriptionFromStripe,
   getOrCreateStripeCustomer,
   calculateExpirationDate,
   calculateDaysRemaining,

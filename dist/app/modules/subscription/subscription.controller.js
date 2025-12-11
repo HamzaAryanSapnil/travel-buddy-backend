@@ -33,7 +33,7 @@ const createSubscription = (0, catchAsync_1.default)((req, res) => __awaiter(voi
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.CREATED,
         success: true,
-        message: "Subscription created successfully.",
+        message: "Checkout session created successfully. Redirect user to the provided URL.",
         data: result,
     });
 }));
@@ -100,6 +100,18 @@ const handleWebhook = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
         data: result,
     });
 }));
+// Sync subscription from Stripe (manual sync)
+const syncSubscription = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const authUser = req.user;
+    const stripeSubscriptionId = req.params.stripeSubscriptionId;
+    const result = yield subscription_service_1.SubscriptionService.syncSubscriptionFromStripe(authUser, stripeSubscriptionId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: result.message,
+        data: result,
+    });
+}));
 exports.SubscriptionController = {
     getSubscriptionStatus,
     createSubscription,
@@ -108,4 +120,5 @@ exports.SubscriptionController = {
     updateSubscription,
     cancelSubscription,
     handleWebhook,
+    syncSubscription,
 };

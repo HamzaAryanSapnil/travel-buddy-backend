@@ -22,7 +22,8 @@ const createExpenseSchema = zod_1.z.object({
         description: stringRequired("Description must be a string.")
             .max(1000, { message: "Description cannot exceed 1000 characters." })
             .optional(),
-        expenseDate: stringRequired("Expense date is required."),
+        expenseDate: stringRequired("Expense date is required.")
+            .datetime({ message: "Expense date must be a valid ISO datetime." }),
         splitType: zod_1.z.enum(expense_constant_1.expenseSplitTypeEnum, {
             error: () => "Invalid split type. Must be EQUAL, CUSTOM, or PERCENTAGE.",
         }),
@@ -89,7 +90,9 @@ const updateExpenseSchema = zod_1.z.object({
         description: stringRequired("Description must be a string.")
             .max(1000, { message: "Description cannot exceed 1000 characters." })
             .optional(),
-        expenseDate: stringRequired("Expense date must be a string.").optional(),
+        expenseDate: stringRequired("Expense date must be a string.")
+            .datetime({ message: "Expense date must be a valid ISO datetime." })
+            .optional(),
         locationId: stringRequired("Location ID must be a string.")
             .uuid({ message: "Location ID must be a valid UUID." })
             .optional(),

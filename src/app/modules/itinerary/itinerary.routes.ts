@@ -18,6 +18,7 @@ router.post(
 // Note: For PUBLIC plans, this can be accessed without auth
 router.get(
   "/:planId",
+  auth("USER", "ADMIN"),
   validateRequest(ItineraryValidation.getItems),
   ItineraryController.getPlanItems
 );
@@ -26,6 +27,7 @@ router.get(
 // Note: For PUBLIC plans, this can be accessed without auth
 router.get(
   "/item/:id",
+  auth("USER", "ADMIN"),
   validateRequest(ItineraryValidation.getSingleItem),
   ItineraryController.getSingleItem
 );

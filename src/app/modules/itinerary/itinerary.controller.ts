@@ -12,7 +12,7 @@ const createItem = catchAsync(async (req, res) => {
     statusCode: httpStatus.CREATED,
     success: true,
     message: "Itinerary item created successfully.",
-    data: result
+    data: result,
   });
 });
 
@@ -23,15 +23,17 @@ const getPlanItems = catchAsync(async (req, res) => {
     req.params.planId,
     {
       planId: req.params.planId,
-      ...req.query
+      ...req.query,
     }
   );
+
+  console.log("result from itinerary route '/itinerary' getPlanItems: ", result);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Itinerary items retrieved successfully.",
-    data: result
+    data: result,
   });
 });
 
@@ -43,19 +45,23 @@ const getSingleItem = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Itinerary item retrieved successfully.",
-    data: result
+    data: result,
   });
 });
 
 const updateItem = catchAsync(async (req, res) => {
   const authUser = req.user as TAuthUser;
-  const result = await ItineraryService.updateItem(authUser, req.params.id, req.body);
+  const result = await ItineraryService.updateItem(
+    authUser,
+    req.params.id,
+    req.body
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Itinerary item updated successfully.",
-    data: result
+    data: result,
   });
 });
 
@@ -67,7 +73,7 @@ const deleteItem = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Itinerary item deleted successfully.",
-    data: null
+    data: null,
   });
 });
 
@@ -79,7 +85,7 @@ const bulkUpsert = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Itinerary items bulk updated successfully.",
-    data: result
+    data: result,
   });
 });
 
@@ -91,7 +97,7 @@ const reorderItems = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Itinerary items reordered successfully.",
-    data: result
+    data: result,
   });
 });
 
@@ -102,6 +108,5 @@ export const ItineraryController = {
   updateItem,
   deleteItem,
   bulkUpsert,
-  reorderItems
+  reorderItems,
 };
-

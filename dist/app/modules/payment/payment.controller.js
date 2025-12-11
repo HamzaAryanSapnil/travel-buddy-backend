@@ -30,6 +30,7 @@ const getPayment = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
 const getMyPayments = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
     const result = yield payment_service_1.PaymentService.getMyPayments(authUser, req.query);
+    console.log("My payments history from payment controller getMyPayments: ", result);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,

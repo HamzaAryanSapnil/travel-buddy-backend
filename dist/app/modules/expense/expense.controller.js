@@ -19,6 +19,7 @@ const sendResponse_1 = __importDefault(require("../../shared/sendResponse"));
 const expense_service_1 = require("./expense.service");
 const createExpense = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
+    console.log("Req.body from expense controller '/expense' createExpense: ", req.body);
     const result = yield expense_service_1.ExpenseService.createExpense(authUser, req.body);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.CREATED,

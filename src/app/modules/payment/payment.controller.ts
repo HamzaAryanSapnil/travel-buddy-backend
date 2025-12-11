@@ -19,7 +19,10 @@ const getPayment = catchAsync(async (req, res) => {
 const getMyPayments = catchAsync(async (req, res) => {
   const authUser = req.user as TAuthUser;
   const result = await PaymentService.getMyPayments(authUser, req.query);
-
+  console.log(
+    "My payments history from payment controller getMyPayments: ",
+    result
+  );
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -76,4 +79,3 @@ export const PaymentController = {
   getPaymentStatistics,
   getPaymentSummary,
 };
-

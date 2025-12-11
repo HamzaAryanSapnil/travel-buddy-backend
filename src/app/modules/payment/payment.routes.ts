@@ -6,14 +6,6 @@ import { PaymentValidation } from "./payment.validation";
 
 const router = express.Router();
 
-// Get single payment
-router.get(
-  "/:id",
-  auth("USER", "ADMIN"),
-  validateRequest(PaymentValidation.getPayment),
-  PaymentController.getPayment
-);
-
 // Get user's own payment history
 router.get(
   "/my-payments",
@@ -30,6 +22,13 @@ router.get(
   PaymentController.getPaymentSummary
 );
 
+// Get single payment
+router.get(
+  "/:id",
+  auth("USER", "ADMIN"),
+  validateRequest(PaymentValidation.getPayment),
+  PaymentController.getPayment
+);
 // Get all payments (admin only)
 router.get(
   "/",
@@ -47,4 +46,3 @@ router.get(
 );
 
 export const PaymentRoutes = router;
-
