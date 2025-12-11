@@ -1,6 +1,7 @@
 import httpStatus from "http-status";
 import catchAsync from "../../shared/catchAsync";
 import sendResponse from "../../shared/sendResponse";
+import ApiError from "../../errors/ApiError";
 import { SubscriptionService } from "./subscription.service";
 import { TAuthUser } from "./subscription.interface";
 
@@ -90,7 +91,23 @@ const cancelSubscription = catchAsync(async (req, res) => {
 // Webhook handler - special case: needs raw body and signature
 const handleWebhook = catchAsync(async (req, res) => {
   // Get raw body (should be Buffer from express.raw() middleware)
-  const rawBody = (req as any).rawBody || Buffer.from(JSON.stringify(req.body));
+  // Check if body is already a Buffer (from express.raw())
+  let rawBody: Buffer;
+  
+  if (Buffer.isBuffer(req.body)) {
+    // Body is already a Buffer (from express.raw())
+    rawBody = req.body;
+  } else if ((req as any).rawBody && Buffer.isBuffer((req as any).rawBody)) {
+    // Raw body stored in req.rawBody
+    rawBody = (req as any).rawBody;
+  } else {
+    // Fallback: try to get from request
+    console.error("⚠️ Raw body not found as Buffer. Body type:", typeof req.body);
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Webhook payload must be provided as raw Buffer. Check middleware configuration."
+    );
+  }
   
   // Get signature from headers
   const signature = req.headers["stripe-signature"] as string;
@@ -103,6 +120,8 @@ const handleWebhook = catchAsync(async (req, res) => {
       data: null,
     });
   }
+
+  console.log(`🔔 Webhook received - Body length: ${rawBody.length}, Signature: ${signature.substring(0, 20)}...`);
 
   const result = await SubscriptionService.handleStripeWebhook(
     rawBody,

@@ -16,6 +16,7 @@ exports.SubscriptionController = void 0;
 const http_status_1 = __importDefault(require("http-status"));
 const catchAsync_1 = __importDefault(require("../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../shared/sendResponse"));
+const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const subscription_service_1 = require("./subscription.service");
 const getSubscriptionStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
@@ -81,7 +82,21 @@ const cancelSubscription = (0, catchAsync_1.default)((req, res) => __awaiter(voi
 // Webhook handler - special case: needs raw body and signature
 const handleWebhook = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Get raw body (should be Buffer from express.raw() middleware)
-    const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body));
+    // Check if body is already a Buffer (from express.raw())
+    let rawBody;
+    if (Buffer.isBuffer(req.body)) {
+        // Body is already a Buffer (from express.raw())
+        rawBody = req.body;
+    }
+    else if (req.rawBody && Buffer.isBuffer(req.rawBody)) {
+        // Raw body stored in req.rawBody
+        rawBody = req.rawBody;
+    }
+    else {
+        // Fallback: try to get from request
+        console.error("⚠️ Raw body not found as Buffer. Body type:", typeof req.body);
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Webhook payload must be provided as raw Buffer. Check middleware configuration.");
+    }
     // Get signature from headers
     const signature = req.headers["stripe-signature"];
     if (!signature) {
@@ -92,6 +107,7 @@ const handleWebhook = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
             data: null,
         });
     }
+    console.log(`🔔 Webhook received - Body length: ${rawBody.length}, Signature: ${signature.substring(0, 20)}...`);
     const result = yield subscription_service_1.SubscriptionService.handleStripeWebhook(rawBody, signature);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,

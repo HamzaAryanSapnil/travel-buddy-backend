@@ -15,7 +15,15 @@ app.use(cors({
 }));
 
 // Parser
-app.use(express.json());
+// Exclude webhook endpoint from JSON parser (needs raw body for Stripe signature verification)
+app.use((req, res, next) => {
+  if (req.path === '/api/v1/subscriptions/webhook') {
+    // Skip JSON parsing for webhook endpoint
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 

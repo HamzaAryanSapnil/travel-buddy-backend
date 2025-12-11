@@ -17,7 +17,16 @@ app.use((0, cors_1.default)({
     credentials: true
 }));
 // Parser
-app.use(express_1.default.json());
+// Exclude webhook endpoint from JSON parser (needs raw body for Stripe signature verification)
+app.use((req, res, next) => {
+    if (req.path === '/api/v1/subscriptions/webhook') {
+        // Skip JSON parsing for webhook endpoint
+        next();
+    }
+    else {
+        express_1.default.json()(req, res, next);
+    }
+});
 app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.urlencoded({ extended: true }));
 // API Routes
