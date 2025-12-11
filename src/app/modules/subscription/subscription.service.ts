@@ -1162,7 +1162,7 @@ const handleCheckoutCompleted = async (
       
       try {
         // Retrieve invoice from Stripe
-        const invoice = await stripe.invoices.retrieve(invoiceId);
+        const invoice = await stripe.invoices.retrieve(invoiceId) as any;
         
         // Get subscription ID
         const subscriptionId = typeof invoice.subscription === 'string'
@@ -1215,9 +1215,11 @@ const handleCheckoutCompleted = async (
             amount: invoice.amount_paid / 100, // Convert from cents
             currency: invoice.currency.toUpperCase(),
             stripePaymentIntentId: paymentIntentId,
-            stripeInvoiceId: invoice.id,
-            status: "SUCCESS",
-            gatewayData: invoice as unknown as Prisma.InputJsonValue,
+            status: "SUCCEEDED",
+            gatewayData: {
+              invoiceId: invoice.id,
+              invoice: invoice as unknown as Prisma.InputJsonValue,
+            } as Prisma.InputJsonValue,
           };
           
           // Add subscriptionId if found

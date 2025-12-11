@@ -923,29 +923,107 @@ const handlePaymentFailed = (invoice) => __awaiter(void 0, void 0, void 0, funct
  * Handle checkout.session.completed event
  */
 const handleCheckoutCompleted = (session) => __awaiter(void 0, void 0, void 0, function* () {
-    // When checkout is completed, Stripe creates the subscription
-    // We should wait for customer.subscription.created event to handle it
-    // But we can verify the session here
+    var _a, _b, _c, _d;
+    console.log(`✅ Processing checkout.session.completed for session: ${session.id}`);
+    // Get userId from metadata
+    const userId = (_a = session.metadata) === null || _a === void 0 ? void 0 : _a.userId;
+    if (!userId) {
+        console.warn("⚠️ Checkout session completed without userId in metadata:", session.id);
+        return;
+    }
+    // If payment is paid and we have an invoice, create payment record
+    if (session.payment_status === "paid" && session.invoice) {
+        const invoiceId = typeof session.invoice === 'string'
+            ? session.invoice
+            : (_b = session.invoice) === null || _b === void 0 ? void 0 : _b.id;
+        if (invoiceId) {
+            console.log(`📄 Retrieving invoice: ${invoiceId}`);
+            try {
+                // Retrieve invoice from Stripe
+                const invoice = yield stripe_1.stripe.invoices.retrieve(invoiceId);
+                // Get subscription ID
+                const subscriptionId = typeof invoice.subscription === 'string'
+                    ? invoice.subscription
+                    : (_c = invoice.subscription) === null || _c === void 0 ? void 0 : _c.id;
+                if (subscriptionId) {
+                    console.log(`🔍 Looking for subscription: ${subscriptionId}`);
+                    // Find subscription in database (might not exist yet if events are out of order)
+                    let subscription = yield prisma_1.prisma.subscription.findUnique({
+                        where: { stripeSubscriptionId: subscriptionId },
+                    });
+                    // If not found, wait a bit and retry (subscription.created might be processing)
+                    if (!subscription) {
+                        console.log("⏳ Subscription not found, waiting for creation...");
+                        for (let i = 0; i < 3; i++) {
+                            yield new Promise(resolve => setTimeout(resolve, 2000));
+                            subscription = yield prisma_1.prisma.subscription.findUnique({
+                                where: { stripeSubscriptionId: subscriptionId },
+                            });
+                            if (subscription) {
+                                console.log("✅ Subscription found after retry:", subscription.id);
+                                break;
+                            }
+                        }
+                    }
+                    // Get payment intent ID
+                    const paymentIntentId = typeof invoice.payment_intent === 'string'
+                        ? invoice.payment_intent
+                        : ((_d = invoice.payment_intent) === null || _d === void 0 ? void 0 : _d.id) || null;
+                    // Check if payment already exists
+                    if (paymentIntentId) {
+                        const existingPayment = yield prisma_1.prisma.paymentTransaction.findUnique({
+                            where: { stripePaymentIntentId: paymentIntentId },
+                        });
+                        if (existingPayment) {
+                            console.log("✅ Payment already exists:", paymentIntentId);
+                            return;
+                        }
+                    }
+                    // Create payment record
+                    const paymentData = {
+                        userId,
+                        amount: invoice.amount_paid / 100, // Convert from cents
+                        currency: invoice.currency.toUpperCase(),
+                        stripePaymentIntentId: paymentIntentId,
+                        status: "SUCCEEDED",
+                        gatewayData: {
+                            invoiceId: invoice.id,
+                            invoice: invoice,
+                        },
+                    };
+                    // Add subscriptionId if found
+                    if (subscription) {
+                        paymentData.subscriptionId = subscription.id;
+                    }
+                    console.log(`💳 Creating payment record for invoice: ${invoiceId}`);
+                    yield prisma_1.prisma.paymentTransaction.create({
+                        data: paymentData,
+                    });
+                    console.log(`✅ Payment record created successfully for invoice: ${invoiceId}`);
+                }
+            }
+            catch (error) {
+                console.error("❌ Error processing invoice from checkout session:", error);
+                // Don't throw - let other webhooks handle it
+            }
+        }
+    }
+    // Also verify subscription exists (will be created by customer.subscription.created if not)
     if (session.subscription) {
         const subscriptionId = session.subscription;
-        // Retrieve the subscription from Stripe to get full details
         try {
-            const stripeSubscription = yield stripe_1.stripe.subscriptions.retrieve(subscriptionId);
-            // Check if subscription already exists in our database
             const existing = yield prisma_1.prisma.subscription.findUnique({
                 where: { stripeSubscriptionId: subscriptionId },
             });
             if (!existing) {
-                // If subscription doesn't exist yet, it will be created by customer.subscription.created webhook
-                // But we can log it here for debugging
-                console.log("Checkout completed, subscription will be created via webhook:", subscriptionId);
+                console.log("ℹ️ Subscription will be created via customer.subscription.created webhook:", subscriptionId);
             }
             else {
-                console.log("Checkout completed for existing subscription:", existing.id);
+                console.log("✅ Subscription already exists:", existing.id);
             }
         }
         catch (error) {
-            console.error("Error retrieving subscription from checkout session:", error);
+            console.error("Error checking subscription:", error);
         }
     }
 });
