@@ -63,6 +63,7 @@ router.post(
 );
 
 // Stripe webhook endpoint (no auth, raw body required)
+// Note: Validation is skipped here because signature is validated in controller
 router.post(
   "/webhook",
   express.raw({ type: "application/json" }), // Raw body middleware for Stripe signature verification
@@ -71,7 +72,6 @@ router.post(
     (req as any).rawBody = req.body;
     next();
   },
-  validateRequest(SubscriptionValidation.stripeWebhook),
   SubscriptionController.handleWebhook
 );
 

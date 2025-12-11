@@ -64,10 +64,9 @@ const getSubscriptionStatusSchema = zod_1.z.object({
 // No params or query needed - uses auth user
 });
 const stripeWebhookSchema = zod_1.z.object({
-    headers: zod_1.z.object({
-        "stripe-signature": stringRequired("Stripe signature is required."),
-    }),
+    // Headers validation is handled in controller
     // Body will be raw buffer, validated in service
+    body: zod_1.z.any().optional(), // Raw body, will be validated in service
 });
 const syncSubscriptionSchema = zod_1.z.object({
     params: zod_1.z.object({

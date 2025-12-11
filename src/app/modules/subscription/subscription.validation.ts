@@ -72,10 +72,9 @@ const getSubscriptionStatusSchema = z.object({
 });
 
 const stripeWebhookSchema = z.object({
-  headers: z.object({
-    "stripe-signature": stringRequired("Stripe signature is required."),
-  }),
+  // Headers validation is handled in controller
   // Body will be raw buffer, validated in service
+  body: z.any().optional(), // Raw body, will be validated in service
 });
 
 const syncSubscriptionSchema = z.object({
