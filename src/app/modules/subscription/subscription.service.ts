@@ -1373,12 +1373,60 @@ const syncSubscriptionFromStripe = async (
 
     // Fetch invoices from Stripe
     console.log(`📋 Fetching invoices from Stripe for subscription: ${stripeSubscription.id}`);
-    const invoices = await stripe.invoices.list({
-      subscription: stripeSubscription.id,
-      limit: 100, // Get up to 100 invoices
-    });
+    
+    // Check if subscription has latest_invoice
+    const latestInvoiceId = (stripeSubscription as any).latest_invoice;
+    if (latestInvoiceId) {
+      console.log(`📋 Subscription has latest_invoice: ${latestInvoiceId}`);
+    }
+    
+    // Try multiple approaches to find invoices
+    let invoices;
+    try {
+      // First, try by subscription
+      invoices = await stripe.invoices.list({
+        subscription: stripeSubscription.id,
+        limit: 100,
+      });
+      console.log(`📋 Found ${invoices.data.length} invoice(s) by subscription`);
+      
+      // If no invoices found, try by customer
+      if (invoices.data.length === 0 && stripeSubscription.customer) {
+        console.log(`📋 Trying to fetch invoices by customer: ${stripeSubscription.customer}`);
+        invoices = await stripe.invoices.list({
+          customer: stripeSubscription.customer as string,
+          limit: 100,
+        });
+        console.log(`📋 Found ${invoices.data.length} invoice(s) by customer`);
+      }
+      
+      // If still no invoices and we have latest_invoice, fetch it directly
+      if (invoices.data.length === 0 && latestInvoiceId) {
+        console.log(`📋 Fetching latest_invoice directly: ${latestInvoiceId}`);
+        try {
+          const latestInvoice = await stripe.invoices.retrieve(latestInvoiceId);
+          invoices = { data: [latestInvoice] };
+          console.log(`📋 Retrieved latest_invoice: ${latestInvoice.id}, Status: ${latestInvoice.status}`);
+        } catch (error: any) {
+          console.error(`❌ Error retrieving latest_invoice:`, error.message);
+        }
+      }
+    } catch (error: any) {
+      console.error(`❌ Error fetching invoices:`, error.message);
+      invoices = { data: [] };
+    }
 
-    console.log(`📋 Found ${invoices.data.length} invoice(s)`);
+    console.log(`📋 Total invoices found: ${invoices.data.length}`);
+    
+    // Log all invoice statuses for debugging
+    if (invoices.data.length > 0) {
+      console.log(`📊 Invoice statuses:`, invoices.data.map(inv => ({
+        id: inv.id,
+        status: inv.status,
+        amount_paid: inv.amount_paid,
+        payment_intent: (inv as any).payment_intent,
+      })));
+    }
 
     let paymentsCreated = 0;
     let paymentsUpdated = 0;
@@ -1386,12 +1434,52 @@ const syncSubscriptionFromStripe = async (
     // Process each invoice
     for (const invoice of invoices.data) {
       const inv = invoice as any;
-      const paymentIntentId = typeof inv.payment_intent === 'string'
+      
+      // Try to get payment intent or charge
+      let paymentIntentId = typeof inv.payment_intent === 'string'
         ? inv.payment_intent
         : inv.payment_intent?.id || null;
+      
+      // Fallback to charge if payment_intent is not available (for older Stripe accounts)
+      if (!paymentIntentId && inv.charge) {
+        paymentIntentId = typeof inv.charge === 'string' ? inv.charge : inv.charge?.id || null;
+        console.log(`📄 Using charge instead of payment_intent for invoice: ${invoice.id}`);
+      }
 
-      if (invoice.status !== "paid" || !paymentIntentId) {
-        continue; // Skip unpaid invoices or invoices without payment intent
+      console.log(`📄 Processing invoice: ${invoice.id}, Status: ${invoice.status}, Payment Intent/Charge: ${paymentIntentId || 'N/A'}, Amount: ${invoice.amount_paid || 0}`);
+
+      // Check if invoice is paid (status can be "paid" or "void" with amount_paid > 0)
+      const isPaid = invoice.status === "paid" || (invoice.amount_paid && invoice.amount_paid > 0);
+      
+      if (!isPaid) {
+        console.log(`⏭️ Skipping invoice ${invoice.id} - Status: ${invoice.status}, Amount Paid: ${invoice.amount_paid || 0}`);
+        continue; // Skip unpaid invoices
+      }
+
+      if (!paymentIntentId) {
+        console.log(`⚠️ Invoice ${invoice.id} is paid but has no payment_intent or charge. Trying to find payment intent from charge...`);
+        
+        // Try to retrieve charge and get payment_intent from it
+        if (inv.charge) {
+          try {
+            const chargeId = typeof inv.charge === 'string' ? inv.charge : inv.charge;
+            const charge = await stripe.charges.retrieve(chargeId);
+            if (charge.payment_intent) {
+              paymentIntentId = typeof charge.payment_intent === 'string' 
+                ? charge.payment_intent 
+                : charge.payment_intent;
+              console.log(`✅ Found payment_intent from charge: ${paymentIntentId}`);
+            }
+          } catch (error) {
+            console.log(`⚠️ Could not retrieve charge: ${error}`);
+          }
+        }
+        
+        // If still no payment_intent, skip this invoice (can't create payment without identifier)
+        if (!paymentIntentId) {
+          console.log(`⏭️ Skipping invoice ${invoice.id} - No payment_intent or charge found`);
+          continue;
+        }
       }
 
       // Check if payment already exists
@@ -1416,19 +1504,24 @@ const syncSubscriptionFromStripe = async (
       }
 
       // Create new payment
-      await prisma.paymentTransaction.create({
-        data: {
-          userId,
-          subscriptionId: subscription.id,
-          amount: invoice.amount_paid / 100,
-          currency: invoice.currency.toUpperCase(),
-          stripePaymentIntentId: paymentIntentId,
-          status: "SUCCEEDED",
-          gatewayData: (invoice as unknown) as Prisma.InputJsonValue,
-        },
-      });
-      paymentsCreated++;
-      console.log(`✅ Created payment for invoice: ${invoice.id}`);
+      try {
+        await prisma.paymentTransaction.create({
+          data: {
+            userId,
+            subscriptionId: subscription.id,
+            amount: invoice.amount_paid / 100,
+            currency: invoice.currency.toUpperCase(),
+            stripePaymentIntentId: paymentIntentId,
+            status: "SUCCEEDED",
+            gatewayData: (invoice as unknown) as Prisma.InputJsonValue,
+          },
+        });
+        paymentsCreated++;
+        console.log(`✅ Created payment for invoice: ${invoice.id}, Amount: ${invoice.amount_paid / 100} ${invoice.currency.toUpperCase()}`);
+      } catch (error: any) {
+        console.error(`❌ Failed to create payment for invoice ${invoice.id}:`, error.message);
+        // Continue with next invoice
+      }
     }
 
     const sub = subscription as any;
