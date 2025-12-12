@@ -77,8 +77,70 @@ const getSingleTravelPlanSchema = z.object({
   }),
 });
 
+const getAllTravelPlansSchema = z.object({
+  query: z.object({
+    searchTerm: z.string().optional(),
+    travelType: z.enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"]).optional(),
+    visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
+    isFeatured: z.string().optional(),
+    ownerId: z.string().uuid({ message: "Owner ID must be a valid UUID." }).optional(),
+    page: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : undefined)),
+    limit: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : undefined)),
+    sortBy: z.string().optional(),
+    sortOrder: z.enum(["asc", "desc"]).optional(),
+  }),
+});
+
+const adminUpdateTravelPlanSchema = z.object({
+  params: z.object({
+    id: z.string().min(1, { message: "Plan id is required." }),
+  }),
+  body: z.object({
+    title: z.string().optional(),
+    destination: z.string().optional(),
+    origin: z.string().optional(),
+    startDate: z
+      .string()
+      .optional()
+      .refine(
+        (date) => {
+          if (!date) return true; // Optional field, skip validation if not provided
+          const startDate = new Date(date);
+          const now = new Date();
+          return !isNaN(startDate.getTime()) && startDate > now;
+        },
+        {
+          message: "Start date must be a future date. Past dates are not allowed.",
+        }
+      ),
+    endDate: z.string().optional(),
+    travelType: z
+      .enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"])
+      .optional(),
+    budgetMin: z.preprocess(
+      (val) => (val ? Number(val) : undefined),
+      z.number().optional()
+    ),
+    budgetMax: z.preprocess(
+      (val) => (val ? Number(val) : undefined),
+      z.number().optional()
+    ),
+    visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
+    description: z.string().optional(),
+    coverPhoto: z.string().optional(),
+  }),
+});
+
 export const TravelPlanValidation = {
   createTravelPlan: createTravelPlanSchema,
   updateTravelPlan: updateTravelPlanSchema,
   getSingleTravelPlan: getSingleTravelPlanSchema,
+  getAllTravelPlans: getAllTravelPlansSchema,
+  adminUpdateTravelPlan: adminUpdateTravelPlanSchema,
 };

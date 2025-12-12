@@ -16,6 +16,10 @@ const router = express_1.default.Router();
 router.get("/public", travelPlan_controller_1.TravelPlanController.getPublicTravelPlans);
 router.post("/", (0, auth_1.default)("USER", "ADMIN"), upload_1.multerUpload.array("files", 10), (0, validateRequest_1.default)(travelPlan_validation_1.TravelPlanValidation.createTravelPlan), travelPlan_controller_1.TravelPlanController.createTravelPlan);
 router.get("/", (0, auth_1.default)("USER", "ADMIN"), travelPlan_controller_1.TravelPlanController.getMyTravelPlans);
+// Admin routes - MUST be before /:id route
+router.get("/admin", (0, auth_1.default)("ADMIN"), (0, validateRequest_1.default)(travelPlan_validation_1.TravelPlanValidation.getAllTravelPlans), travelPlan_controller_1.TravelPlanController.getAllTravelPlans);
+router.patch("/admin/:id", (0, auth_1.default)("ADMIN"), upload_1.multerUpload.array("files", 10), (0, validateRequest_1.default)(travelPlan_validation_1.TravelPlanValidation.adminUpdateTravelPlan), travelPlan_controller_1.TravelPlanController.adminUpdateTravelPlan);
+router.delete("/admin/:id", (0, auth_1.default)("ADMIN"), (0, validateRequest_1.default)(travelPlan_validation_1.TravelPlanValidation.getSingleTravelPlan), travelPlan_controller_1.TravelPlanController.adminDeleteTravelPlan);
 // Public route with optional auth - Get single plan (PUBLIC plans accessible without auth)
 router.get("/:id", (0, optionalAuth_1.default)(), (0, validateRequest_1.default)(travelPlan_validation_1.TravelPlanValidation.getSingleTravelPlan), travelPlan_controller_1.TravelPlanController.getSingleTravelPlan);
 router.patch("/:id", (0, auth_1.default)("USER", "ADMIN"), upload_1.multerUpload.array("files", 10), (0, validateRequest_1.default)(travelPlan_validation_1.TravelPlanValidation.updateTravelPlan), travelPlan_controller_1.TravelPlanController.updateTravelPlan);

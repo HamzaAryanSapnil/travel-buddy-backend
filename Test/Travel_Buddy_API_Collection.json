@@ -530,6 +530,133 @@
             },
             "description": "Delete a travel plan. Only owners or admins can delete. Replace {{planId}} with the actual id."
           }
+        },
+        {
+          "name": "Admin - Get All Travel Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans/admin?searchTerm=cox&travelType=FRIENDS&visibility=PUBLIC&isFeatured=true&ownerId={{userId}}&page=1&limit=10&sortBy=startDate&sortOrder=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans", "admin"],
+              "query": [
+                { "key": "searchTerm", "value": "cox", "description": "Search in title or destination (optional)" },
+                { "key": "travelType", "value": "FRIENDS", "description": "Filter by travel type: SOLO, COUPLE, FAMILY, FRIENDS, GROUP (optional)" },
+                { "key": "visibility", "value": "PUBLIC", "description": "Filter by visibility: PUBLIC, PRIVATE, UNLISTED (optional)" },
+                { "key": "isFeatured", "value": "true", "description": "Filter by featured status: true/false (optional)" },
+                { "key": "ownerId", "value": "{{userId}}", "description": "Filter by owner user ID (UUID) (optional)" },
+                { "key": "page", "value": "1", "description": "Page number (optional, default: 1)" },
+                { "key": "limit", "value": "10", "description": "Items per page (optional, default: 10)" },
+                { "key": "sortBy", "value": "startDate", "description": "Sort field (optional, default: startDate)" },
+                { "key": "sortOrder", "value": "asc", "description": "Sort order: asc or desc (optional, default: asc)" }
+              ]
+            },
+            "description": "Get all travel plans (admin only). Returns ALL plans regardless of visibility (PUBLIC, PRIVATE, UNLISTED). Supports pagination, search, and filtering. Search works on title and destination fields. Requires ADMIN role."
+          }
+        },
+        {
+          "name": "Admin - Update Travel Plan",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Updated Plan Title",
+                  "type": "text",
+                  "description": "Plan title (optional)"
+                },
+                {
+                  "key": "destination",
+                  "value": "Updated Destination",
+                  "type": "text",
+                  "description": "Destination (optional)"
+                },
+                {
+                  "key": "origin",
+                  "value": "Updated Origin",
+                  "type": "text",
+                  "description": "Origin (optional)"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-10-15",
+                  "type": "text",
+                  "description": "Start date - must be future date (optional)"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-10-21",
+                  "type": "text",
+                  "description": "End date - must be >= startDate (optional)"
+                },
+                {
+                  "key": "travelType",
+                  "value": "FRIENDS",
+                  "type": "text",
+                  "description": "Travel type: SOLO, COUPLE, FAMILY, FRIENDS, GROUP (optional)"
+                },
+                {
+                  "key": "budgetMin",
+                  "value": "5000",
+                  "type": "text",
+                  "description": "Minimum budget (optional)"
+                },
+                {
+                  "key": "budgetMax",
+                  "value": "15000",
+                  "type": "text",
+                  "description": "Maximum budget (optional)"
+                },
+                {
+                  "key": "visibility",
+                  "value": "PUBLIC",
+                  "type": "text",
+                  "description": "Visibility: PUBLIC, PRIVATE, UNLISTED (optional)"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated description",
+                  "type": "text",
+                  "description": "Plan description (optional)"
+                },
+                {
+                  "key": "coverPhoto",
+                  "value": "https://example.com/photo.jpg",
+                  "type": "text",
+                  "description": "Cover photo URL (optional, if not uploading file)"
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload up to 10 images. First image replaces cover photo, rest added to gallery. (optional)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans/admin/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans", "admin", "{{planId}}"]
+            },
+            "description": "Update any travel plan (admin only). Admin can update any plan without permission checks. All fields optional. Supports file uploads: up to 10 images (first replaces coverPhoto, rest added to gallery). If updating startDate, must be future date. endDate must be >= startDate. Requires ADMIN role."
+          }
+        },
+        {
+          "name": "Admin - Delete Travel Plan",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/travel-plans/admin/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "travel-plans", "admin", "{{planId}}"]
+            },
+            "description": "Delete any travel plan (admin only). Admin can delete any plan without permission checks. Replace {{planId}} with the actual id. Requires ADMIN role."
+          }
         }
       ]
     },

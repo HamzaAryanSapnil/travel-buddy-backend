@@ -4,7 +4,8 @@ export const travelPlanFilterableFields = [
     "searchTerm",
     "travelType",
     "visibility",
-    "isFeatured"
+    "isFeatured",
+    "ownerId"
 ];
 
 

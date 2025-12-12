@@ -636,6 +636,270 @@ const deleteTravelPlan = async (authUser: TAuthUser, id: string) => {
   return deleted;
 };
 
+// Admin service functions
+const getAllTravelPlans = async (query: TTravelPlanQuery) => {
+  const filters = pick<TTravelPlanQuery, keyof TTravelPlanQuery>(
+    query,
+    travelPlanFilterableFields as (keyof TTravelPlanQuery)[]
+  );
+  
+  const options: IPaginationOptions = {
+    page: query.page ?? 1,
+    limit: query.limit ?? 10,
+    sortBy: query.sortBy ?? "startDate",
+    sortOrder: query.sortOrder ?? "asc",
+  };
+  
+  const { page, limit, skip, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(options);
+
+  const { searchTerm, ...restFilters } = filters as {
+    searchTerm?: string;
+    travelType?: string;
+    visibility?: string;
+    isFeatured?: string;
+    ownerId?: string;
+  };
+
+  const andConditions: Prisma.TravelPlanWhereInput[] = [];
+
+  // No visibility filter - return ALL plans (PUBLIC, PRIVATE, UNLISTED)
+
+  if (searchTerm) {
+    andConditions.push({
+      OR: travelPlanSearchableFields.map((field) => ({
+        [field]: {
+          contains: searchTerm,
+          mode: "insensitive",
+        },
+      })),
+    });
+  }
+
+  if (restFilters.travelType) {
+    andConditions.push({
+      travelType: restFilters.travelType as any,
+    });
+  }
+
+  if (restFilters.visibility) {
+    andConditions.push({
+      visibility: restFilters.visibility as any,
+    });
+  }
+
+  if (restFilters.isFeatured) {
+    const isFeatured = restFilters.isFeatured === "true";
+    andConditions.push({
+      isFeatured,
+    });
+  }
+
+  if (restFilters.ownerId) {
+    andConditions.push({
+      ownerId: restFilters.ownerId,
+    });
+  }
+
+  const where: Prisma.TravelPlanWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const plans = await prisma.travelPlan.findMany({
+    where,
+    skip,
+    take: limit,
+    orderBy: {
+      [sortBy]: sortOrder,
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          profileImage: true,
+        },
+      },
+      _count: {
+        select: {
+          itineraryItems: true,
+          tripMembers: true,
+        },
+      },
+    },
+  });
+
+  const total = await prisma.travelPlan.count({
+    where,
+  });
+
+  const dataWithTotalDays = plans.map((plan) => ({
+    ...plan,
+    totalDays: getTotalDays(plan.startDate, plan.endDate),
+  }));
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+    },
+    data: dataWithTotalDays,
+  };
+};
+
+const adminUpdateTravelPlan = async (
+  id: string,
+  payload: TTravelPlanUpdatePayload,
+  files?: Express.Multer.File[]
+) => {
+  // Check if plan exists (no permission check for admin)
+  const existing = await prisma.travelPlan.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Travel plan not found.");
+  }
+
+  const data: Prisma.TravelPlanUpdateInput = {};
+
+  // Upload files to Cloudinary if provided
+  if (files && files.length > 0) {
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadResult = await cloudinary.uploader.upload(file.path, {
+          folder: `travel-buddy/plans`,
+          resource_type: "image",
+        });
+
+        // First file is coverPhoto
+        if (i === 0) {
+          data.coverPhoto = uploadResult.secure_url;
+        } else {
+          // Additional images are added to media/gallery
+          await prisma.media.create({
+            data: {
+              ownerId: existing.ownerId,
+              planId: id,
+              url: uploadResult.secure_url,
+              provider: "cloudinary",
+              type: "photo",
+            },
+          });
+        }
+
+        // Clean up temp file
+        try {
+          await fs.unlink(file.path);
+        } catch (err) {
+          // Ignore cleanup errors
+        }
+      }
+    } catch (error: any) {
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Image upload failed: ${error.message}`
+      );
+    }
+  }
+
+  if (payload.title !== undefined) data.title = payload.title;
+  if (payload.destination !== undefined) data.destination = payload.destination;
+  if (payload.origin !== undefined) data.origin = payload.origin;
+  if (payload.description !== undefined) data.description = payload.description;
+  if (payload.coverPhoto !== undefined && !files) data.coverPhoto = payload.coverPhoto;
+  if (payload.budgetMin !== undefined) data.budgetMin = Number(payload.budgetMin);
+  if (payload.budgetMax !== undefined) data.budgetMax = Number(payload.budgetMax);
+
+  if (payload.travelType !== undefined) {
+    data.travelType = payload.travelType;
+  }
+
+  if (payload.visibility !== undefined) {
+    data.visibility = payload.visibility;
+  }
+
+  if (payload.startDate !== undefined || payload.endDate !== undefined) {
+    const start = payload.startDate
+      ? new Date(payload.startDate)
+      : existing.startDate;
+    const end = payload.endDate ? new Date(payload.endDate) : existing.endDate;
+    const now = new Date();
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Invalid date format."
+      );
+    }
+
+    // If startDate is being updated, it must be a future date
+    if (payload.startDate !== undefined && start <= now) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Start date must be a future date. Past dates are not allowed."
+      );
+    }
+
+    if (end < start) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "Invalid dates. endDate must be greater than or equal to startDate."
+      );
+    }
+
+    data.startDate = start;
+    data.endDate = end;
+  }
+
+  const updated = await prisma.travelPlan.update({
+    where: { id },
+    data,
+  });
+
+  // Notify all plan members (async, don't wait)
+  NotificationService.notifyPlanMembers(
+    id,
+    existing.ownerId,
+    {
+      type: NotificationType.PLAN_UPDATED,
+      title: "Travel plan updated",
+      message: `"${updated.title}" has been updated by admin`,
+      data: {
+        planId: id
+      }
+    }
+  ).catch((error) => {
+    // Log error but don't fail the update
+    console.error("Failed to send notification for plan update:", error);
+  });
+
+  return {
+    ...updated,
+    totalDays: getTotalDays(updated.startDate, updated.endDate),
+  };
+};
+
+const adminDeleteTravelPlan = async (id: string) => {
+  // Check if plan exists (no permission check for admin)
+  const plan = await prisma.travelPlan.findUnique({
+    where: { id },
+  });
+
+  if (!plan) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Travel plan not found.");
+  }
+
+  // Delete plan directly (cascade will handle related records)
+  const deleted = await prisma.travelPlan.delete({
+    where: { id },
+  });
+
+  return deleted;
+};
+
 export const TravelPlanService = {
   createTravelPlan,
   getMyTravelPlans,
@@ -643,4 +907,7 @@ export const TravelPlanService = {
   getSingleTravelPlan,
   updateTravelPlan,
   deleteTravelPlan,
+  getAllTravelPlans,
+  adminUpdateTravelPlan,
+  adminDeleteTravelPlan,
 };

@@ -84,13 +84,56 @@ const deleteTravelPlan = catchAsync(async (req, res) => {
     });
 });
 
+// Admin routes
+const getAllTravelPlans = catchAsync(async (req, res) => {
+    const result = await TravelPlanService.getAllTravelPlans(req.query);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "All travel plans retrieved successfully.",
+        meta: result.meta,
+        data: result.data
+    });
+});
+
+const adminUpdateTravelPlan = catchAsync(async (req, res) => {
+    const files = req.files as Express.Multer.File[] | undefined;
+    const result = await TravelPlanService.adminUpdateTravelPlan(
+        req.params.id,
+        req.body,
+        files
+    );
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Travel plan updated successfully by admin.",
+        data: result
+    });
+});
+
+const adminDeleteTravelPlan = catchAsync(async (req, res) => {
+    await TravelPlanService.adminDeleteTravelPlan(req.params.id);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Travel plan deleted successfully by admin.",
+        data: null
+    });
+});
+
 export const TravelPlanController = {
     createTravelPlan,
     getMyTravelPlans,
     getPublicTravelPlans,
     getSingleTravelPlan,
     updateTravelPlan,
-    deleteTravelPlan
+    deleteTravelPlan,
+    getAllTravelPlans,
+    adminUpdateTravelPlan,
+    adminDeleteTravelPlan
 };
 
 

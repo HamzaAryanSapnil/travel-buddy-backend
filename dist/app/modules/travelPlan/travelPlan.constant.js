@@ -6,5 +6,6 @@ exports.travelPlanFilterableFields = [
     "searchTerm",
     "travelType",
     "visibility",
-    "isFeatured"
+    "isFeatured",
+    "ownerId"
 ];

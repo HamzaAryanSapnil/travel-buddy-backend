@@ -6949,11 +6949,322 @@ OR
 
 ---
 
+### 5.17 Admin Travel Plans Management (`/admin/plans`)
+
+#### Page Title
+
+"All Travel Plans"
+
+**Description:** "Manage all travel plans in the system"
+
+**Access:** ADMIN role only
+
+---
+
+#### API Integration
+
+**Get All Travel Plans (Admin):**
+- **Endpoint:** `GET /api/v1/travel-plans/admin`
+- **Authentication:** Required (ADMIN only)
+- **Query Parameters:**
+  - `searchTerm` (optional) - Search in title and destination
+  - `travelType` (optional) - Filter by: SOLO, COUPLE, FAMILY, FRIENDS, GROUP
+  - `visibility` (optional) - Filter by: PUBLIC, PRIVATE, UNLISTED
+  - `isFeatured` (optional) - Filter by featured status: true/false
+  - `ownerId` (optional) - Filter by owner user ID (UUID)
+  - `page` (optional) - Page number (default: 1)
+  - `limit` (optional) - Items per page (default: 10)
+  - `sortBy` (optional) - Sort field (default: startDate)
+  - `sortOrder` (optional) - Sort order: asc or desc (default: asc)
+- **Response Structure:**
+```json
+{
+  "success": true,
+  "message": "All travel plans retrieved successfully.",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 150
+  },
+  "data": [
+    {
+      "id": "plan-uuid",
+      "title": "Summer Trip to Cox's Bazar",
+      "destination": "Cox's Bazar, Bangladesh",
+      "origin": "Dhaka, Bangladesh",
+      "startDate": "2025-09-15T00:00:00.000Z",
+      "endDate": "2025-09-21T00:00:00.000Z",
+      "budgetMin": 5000,
+      "budgetMax": 12000,
+      "travelType": "FRIENDS",
+      "visibility": "PUBLIC",
+      "description": "An awesome week-long trip!",
+      "coverPhoto": "https://example.com/photo.jpg",
+      "isFeatured": true,
+      "totalDays": 7,
+      "owner": {
+        "id": "user-uuid",
+        "fullName": "John Doe",
+        "email": "john@example.com",
+        "profileImage": "https://example.com/profile.jpg"
+      },
+      "_count": {
+        "itineraryItems": 15,
+        "tripMembers": 5
+      },
+      "createdAt": "2025-01-10T10:30:00.000Z",
+      "updatedAt": "2025-01-15T14:20:00.000Z"
+    }
+  ]
+}
+```
+- **Important Notes:**
+  - Returns ALL plans regardless of visibility (PUBLIC, PRIVATE, UNLISTED)
+  - Admin can see plans they're not members of
+  - Search works on title and destination fields
+  - Supports pagination, filtering, and sorting
+
+**Update Travel Plan (Admin):**
+- **Endpoint:** `PATCH /api/v1/travel-plans/admin/:id`
+- **Authentication:** Required (ADMIN only)
+- **Request Body:** multipart/form-data (for file uploads) or application/json
+- **All Fields Optional:**
+  - `title` (string)
+  - `destination` (string)
+  - `origin` (string)
+  - `startDate` (string, ISO date - must be future date)
+  - `endDate` (string, ISO date - must be >= startDate)
+  - `travelType` (enum: SOLO, COUPLE, FAMILY, FRIENDS, GROUP)
+  - `budgetMin` (number)
+  - `budgetMax` (number)
+  - `visibility` (enum: PUBLIC, PRIVATE, UNLISTED)
+  - `description` (string)
+  - `coverPhoto` (string, URL - if not uploading file)
+  - `files` (File[], up to 10 images - first replaces coverPhoto, rest added to gallery)
+- **Success Response:** Returns updated plan with totalDays
+- **Important Notes:**
+  - Admin can update ANY plan without permission checks
+  - If updating startDate, it must be a future date
+  - endDate must be >= startDate
+  - File uploads: Use multipart/form-data, first file replaces coverPhoto
+
+**Delete Travel Plan (Admin):**
+- **Endpoint:** `DELETE /api/v1/travel-plans/admin/:id`
+- **Authentication:** Required (ADMIN only)
+- **Success Response:** Returns success message
+- **Important Notes:**
+  - Admin can delete ANY plan without permission checks
+  - Confirmation required before deletion
+
+---
+
+#### Header Section
+
+**Page Header:**
+- **Title:** "All Travel Plans"
+- **Subtitle:** "Manage all travel plans in the system"
+- **Badge:** Total count from `meta.total`
+
+**Search Bar:**
+- **Placeholder:** "Search by title or destination..."
+- **API Parameter:** `searchTerm`
+- **Real-time search:** Debounce input (500ms delay)
+- **Clear button:** Clear search and refresh list
+
+**Filter Section:**
+- **Travel Type Filter:**
+  - **Dropdown:** All Types, SOLO, COUPLE, FAMILY, FRIENDS, GROUP
+  - **Default:** All Types
+  - **API Parameter:** `travelType` (omit for "All Types")
+- **Visibility Filter:**
+  - **Dropdown:** All, PUBLIC, PRIVATE, UNLISTED
+  - **Default:** All
+  - **API Parameter:** `visibility` (omit for "All")
+- **Featured Filter:**
+  - **Toggle:** All, Featured Only, Not Featured
+  - **Default:** All
+  - **API Parameter:** `isFeatured` (true/false, omit for "All")
+- **Owner Filter:**
+  - **Input:** Owner user ID (UUID) or email search
+  - **API Parameter:** `ownerId` (UUID)
+  - **Optional:** Auto-complete with user search
+
+**Sort Options:**
+- **Sort By:**
+  - **Dropdown:** Start Date, Created Date, Title, Destination
+  - **Default:** Start Date
+  - **API Parameter:** `sortBy` (startDate, createdAt, title, destination)
+- **Sort Order:**
+  - **Toggle:** Ascending / Descending
+  - **Default:** Ascending
+  - **API Parameter:** `sortOrder` (asc/desc)
+
+**Actions:**
+- **Refresh Button:** Reload plans list
+- **Export Button (Optional):** Export plans to CSV/Excel
+
+**Styling:**
+- Sticky header (stays at top on scroll)
+- Clear filter controls
+- Responsive layout (filters stack on mobile)
+
+---
+
+#### Plans List/Grid
+
+**Layout Options:**
+- **Grid View:** Card layout (default)
+- **List View:** Table layout (optional toggle)
+- **Responsive:** 1 column (mobile), 2 columns (tablet), 3-4 columns (desktop)
+
+**Plan Card (Grid View):**
+
+**Display:**
+- **Cover Photo:** Plan cover photo or placeholder
+- **Featured Badge:** "Featured" badge if `isFeatured: true`
+- **Visibility Badge:**
+  - **PUBLIC:** "Public" (green badge)
+  - **PRIVATE:** "Private" (red badge)
+  - **UNLISTED:** "Unlisted" (yellow badge)
+- **Title:** Plan title (bold, clickable)
+- **Destination:** Destination location
+- **Dates:** "Start: [date] - End: [date]" or "Duration: X days"
+- **Travel Type:** Travel type badge (SOLO, COUPLE, etc.)
+- **Owner Info:**
+  - Owner avatar (small)
+  - Owner name and email
+  - Link to owner profile (if admin users page exists)
+- **Stats:**
+  - Member count: "X members"
+  - Itinerary items: "X activities"
+- **Actions:**
+  - **View Button:** View plan details (eye icon)
+  - **Edit Button:** Open edit modal/form (edit icon)
+  - **Delete Button:** Delete plan (trash icon, with confirmation)
+
+**Plan Row (List/Table View):**
+
+**Columns:**
+- Cover photo (thumbnail)
+- Title (clickable)
+- Destination
+- Owner (name, email)
+- Visibility badge
+- Travel type
+- Dates (start - end)
+- Member count
+- Actions (View, Edit, Delete buttons)
+
+**Styling:**
+- Card shadows and hover effects
+- Clear badge colors
+- Responsive table (horizontal scroll on mobile)
+- Action buttons in dropdown menu (mobile)
+
+---
+
+#### Pagination
+
+**Pagination Controls:**
+- **Display:** Page numbers or "Load More" button
+- **Info:** "Showing X to Y of Z plans"
+- **Controls:**
+  - Previous/Next buttons
+  - Page number buttons
+  - Items per page selector (10, 20, 50, 100)
+- **API Parameters:** Update `page` and `limit` query params
+
+**Styling:**
+- Clear pagination UI
+- Disabled state for first/last page
+- Current page highlighted
+
+---
+
+#### Update Plan Modal/Form
+
+**Modal Title:** "Update Travel Plan"
+
+**Form Fields:**
+- Reuse existing travel plan update form (from section 5.4)
+- All fields editable (no restrictions for admin)
+- File upload support (up to 10 images)
+- Date validation (startDate must be future, endDate >= startDate)
+
+**Actions:**
+- **Save Button:** Update plan
+  - **API:** `PATCH /api/v1/travel-plans/admin/:id` with `credentials: 'include'`
+  - **Success:** Show success toast, refresh plans list, close modal
+  - **Error:** Display error from `errorMessages` array
+- **Cancel Button:** Close modal without saving
+
+**Styling:**
+- Modal overlay
+- Form layout with proper spacing
+- File upload area with preview
+- Clear action buttons
+
+---
+
+#### Delete Confirmation Dialog
+
+**Dialog Title:** "Delete Travel Plan"
+
+**Message:**
+- "Are you sure you want to delete this plan?"
+- "This action cannot be undone."
+- Plan title displayed
+
+**Actions:**
+- **Delete Button:** Confirm deletion
+  - **API:** `DELETE /api/v1/travel-plans/admin/:id` with `credentials: 'include'`
+  - **Success:** Show success toast, refresh plans list, close dialog
+  - **Error:** Display error message
+- **Cancel Button:** Close dialog without deleting
+
+**Styling:**
+- Warning icon
+- Red delete button
+- Clear cancel button
+
+---
+
+#### Empty State
+
+**Message:** "No travel plans found"
+
+**Sub-message:** "Try adjusting your filters or search terms"
+
+**Button:** "Clear Filters" → Reset all filters and search
+
+**Styling:**
+- Centered content
+- Large icon or illustration
+- Friendly message
+
+---
+
+#### Error Handling
+
+**Error Messages:**
+- "Failed to load travel plans" (network/server errors)
+- "You don't have permission to access this page" (non-admin users)
+- "Travel plan not found" (invalid plan ID)
+- Display errors from `errorMessages` array in API response
+
+**Styling:**
+- Error banner or toast notification
+- Clear error messages
+- Retry button for failed requests
+
+---
+
 **Part 7 Complete!** ✅
 
 এই পর্যন্ত সম্পন্ন হয়েছে:
 
 - 5.16 Notifications (Header actions, Notification list, All 20+ notification types, Unread badge)
+- 5.17 Admin Travel Plans Management (Get all plans, Update any plan, Delete any plan, Filters and search, Pagination)
 - 6.1 Trip Members Management (Member list, Invite form, Pending invitations, Role management)
 
 ---

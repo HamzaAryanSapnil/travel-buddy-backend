@@ -486,6 +486,207 @@ const deleteTravelPlan = (authUser, id) => __awaiter(void 0, void 0, void 0, fun
     });
     return deleted;
 });
+// Admin service functions
+const getAllTravelPlans = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
+    const filters = (0, pick_1.default)(query, travelPlan_constant_1.travelPlanFilterableFields);
+    const options = {
+        page: (_a = query.page) !== null && _a !== void 0 ? _a : 1,
+        limit: (_b = query.limit) !== null && _b !== void 0 ? _b : 10,
+        sortBy: (_c = query.sortBy) !== null && _c !== void 0 ? _c : "startDate",
+        sortOrder: (_d = query.sortOrder) !== null && _d !== void 0 ? _d : "asc",
+    };
+    const { page, limit, skip, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(options);
+    const _e = filters, { searchTerm } = _e, restFilters = __rest(_e, ["searchTerm"]);
+    const andConditions = [];
+    // No visibility filter - return ALL plans (PUBLIC, PRIVATE, UNLISTED)
+    if (searchTerm) {
+        andConditions.push({
+            OR: travelPlan_constant_1.travelPlanSearchableFields.map((field) => ({
+                [field]: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                },
+            })),
+        });
+    }
+    if (restFilters.travelType) {
+        andConditions.push({
+            travelType: restFilters.travelType,
+        });
+    }
+    if (restFilters.visibility) {
+        andConditions.push({
+            visibility: restFilters.visibility,
+        });
+    }
+    if (restFilters.isFeatured) {
+        const isFeatured = restFilters.isFeatured === "true";
+        andConditions.push({
+            isFeatured,
+        });
+    }
+    if (restFilters.ownerId) {
+        andConditions.push({
+            ownerId: restFilters.ownerId,
+        });
+    }
+    const where = andConditions.length > 0 ? { AND: andConditions } : {};
+    const plans = yield prisma_1.prisma.travelPlan.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+            [sortBy]: sortOrder,
+        },
+        include: {
+            owner: {
+                select: {
+                    id: true,
+                    fullName: true,
+                    email: true,
+                    profileImage: true,
+                },
+            },
+            _count: {
+                select: {
+                    itineraryItems: true,
+                    tripMembers: true,
+                },
+            },
+        },
+    });
+    const total = yield prisma_1.prisma.travelPlan.count({
+        where,
+    });
+    const dataWithTotalDays = plans.map((plan) => (Object.assign(Object.assign({}, plan), { totalDays: getTotalDays(plan.startDate, plan.endDate) })));
+    return {
+        meta: {
+            page,
+            limit,
+            total,
+        },
+        data: dataWithTotalDays,
+    };
+});
+const adminUpdateTravelPlan = (id, payload, files) => __awaiter(void 0, void 0, void 0, function* () {
+    // Check if plan exists (no permission check for admin)
+    const existing = yield prisma_1.prisma.travelPlan.findUnique({
+        where: { id },
+    });
+    if (!existing) {
+        throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Travel plan not found.");
+    }
+    const data = {};
+    // Upload files to Cloudinary if provided
+    if (files && files.length > 0) {
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const uploadResult = yield cloudinary_config_1.default.uploader.upload(file.path, {
+                    folder: `travel-buddy/plans`,
+                    resource_type: "image",
+                });
+                // First file is coverPhoto
+                if (i === 0) {
+                    data.coverPhoto = uploadResult.secure_url;
+                }
+                else {
+                    // Additional images are added to media/gallery
+                    yield prisma_1.prisma.media.create({
+                        data: {
+                            ownerId: existing.ownerId,
+                            planId: id,
+                            url: uploadResult.secure_url,
+                            provider: "cloudinary",
+                            type: "photo",
+                        },
+                    });
+                }
+                // Clean up temp file
+                try {
+                    yield promises_1.default.unlink(file.path);
+                }
+                catch (err) {
+                    // Ignore cleanup errors
+                }
+            }
+        }
+        catch (error) {
+            throw new ApiError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, `Image upload failed: ${error.message}`);
+        }
+    }
+    if (payload.title !== undefined)
+        data.title = payload.title;
+    if (payload.destination !== undefined)
+        data.destination = payload.destination;
+    if (payload.origin !== undefined)
+        data.origin = payload.origin;
+    if (payload.description !== undefined)
+        data.description = payload.description;
+    if (payload.coverPhoto !== undefined && !files)
+        data.coverPhoto = payload.coverPhoto;
+    if (payload.budgetMin !== undefined)
+        data.budgetMin = Number(payload.budgetMin);
+    if (payload.budgetMax !== undefined)
+        data.budgetMax = Number(payload.budgetMax);
+    if (payload.travelType !== undefined) {
+        data.travelType = payload.travelType;
+    }
+    if (payload.visibility !== undefined) {
+        data.visibility = payload.visibility;
+    }
+    if (payload.startDate !== undefined || payload.endDate !== undefined) {
+        const start = payload.startDate
+            ? new Date(payload.startDate)
+            : existing.startDate;
+        const end = payload.endDate ? new Date(payload.endDate) : existing.endDate;
+        const now = new Date();
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Invalid date format.");
+        }
+        // If startDate is being updated, it must be a future date
+        if (payload.startDate !== undefined && start <= now) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Start date must be a future date. Past dates are not allowed.");
+        }
+        if (end < start) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Invalid dates. endDate must be greater than or equal to startDate.");
+        }
+        data.startDate = start;
+        data.endDate = end;
+    }
+    const updated = yield prisma_1.prisma.travelPlan.update({
+        where: { id },
+        data,
+    });
+    // Notify all plan members (async, don't wait)
+    notification_service_1.NotificationService.notifyPlanMembers(id, existing.ownerId, {
+        type: client_1.NotificationType.PLAN_UPDATED,
+        title: "Travel plan updated",
+        message: `"${updated.title}" has been updated by admin`,
+        data: {
+            planId: id
+        }
+    }).catch((error) => {
+        // Log error but don't fail the update
+        console.error("Failed to send notification for plan update:", error);
+    });
+    return Object.assign(Object.assign({}, updated), { totalDays: getTotalDays(updated.startDate, updated.endDate) });
+});
+const adminDeleteTravelPlan = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    // Check if plan exists (no permission check for admin)
+    const plan = yield prisma_1.prisma.travelPlan.findUnique({
+        where: { id },
+    });
+    if (!plan) {
+        throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Travel plan not found.");
+    }
+    // Delete plan directly (cascade will handle related records)
+    const deleted = yield prisma_1.prisma.travelPlan.delete({
+        where: { id },
+    });
+    return deleted;
+});
 exports.TravelPlanService = {
     createTravelPlan,
     getMyTravelPlans,
@@ -493,4 +694,7 @@ exports.TravelPlanService = {
     getSingleTravelPlan,
     updateTravelPlan,
     deleteTravelPlan,
+    getAllTravelPlans,
+    adminUpdateTravelPlan,
+    adminDeleteTravelPlan,
 };

@@ -28,6 +28,29 @@ router.get(
     TravelPlanController.getMyTravelPlans
 );
 
+// Admin routes - MUST be before /:id route
+router.get(
+    "/admin",
+    auth("ADMIN"),
+    validateRequest(TravelPlanValidation.getAllTravelPlans),
+    TravelPlanController.getAllTravelPlans
+);
+
+router.patch(
+    "/admin/:id",
+    auth("ADMIN"),
+    multerUpload.array("files", 10),
+    validateRequest(TravelPlanValidation.adminUpdateTravelPlan),
+    TravelPlanController.adminUpdateTravelPlan
+);
+
+router.delete(
+    "/admin/:id",
+    auth("ADMIN"),
+    validateRequest(TravelPlanValidation.getSingleTravelPlan),
+    TravelPlanController.adminDeleteTravelPlan
+);
+
 // Public route with optional auth - Get single plan (PUBLIC plans accessible without auth)
 router.get(
     "/:id",

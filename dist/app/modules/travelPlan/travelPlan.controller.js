@@ -80,11 +80,44 @@ const deleteTravelPlan = (0, catchAsync_1.default)((req, res) => __awaiter(void 
         data: null
     });
 }));
+// Admin routes
+const getAllTravelPlans = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield travelPlan_service_1.TravelPlanService.getAllTravelPlans(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "All travel plans retrieved successfully.",
+        meta: result.meta,
+        data: result.data
+    });
+}));
+const adminUpdateTravelPlan = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const files = req.files;
+    const result = yield travelPlan_service_1.TravelPlanService.adminUpdateTravelPlan(req.params.id, req.body, files);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "Travel plan updated successfully by admin.",
+        data: result
+    });
+}));
+const adminDeleteTravelPlan = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    yield travelPlan_service_1.TravelPlanService.adminDeleteTravelPlan(req.params.id);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "Travel plan deleted successfully by admin.",
+        data: null
+    });
+}));
 exports.TravelPlanController = {
     createTravelPlan,
     getMyTravelPlans,
     getPublicTravelPlans,
     getSingleTravelPlan,
     updateTravelPlan,
-    deleteTravelPlan
+    deleteTravelPlan,
+    getAllTravelPlans,
+    adminUpdateTravelPlan,
+    adminDeleteTravelPlan
 };
