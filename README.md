@@ -233,16 +233,21 @@ All routes except authentication endpoints require valid JWT token in cookies. T
 - `GET /me/reviews` - Get my reviews (given/received)
 - `GET /admin` - Get all users (admin only)
 - `PATCH /admin/:id/status` - Update user status (admin only)
-- `PATCH /admin/:id/verify` - Verify user (admin only)
+- `PATCH /admin/:id/verify` - Verify / approve user (admin only)
 - `PATCH /admin/:id/role` - Update user role (admin only)
 - `DELETE /admin/:id` - Soft delete user (admin only)
+- **Self-protection:** Admin cannot update/delete/verify/change role of their own account (backend enforced).
 
 ### 🗺️ Travel Plans (`/api/v1/travel-plans`)
 - `POST /` - Create travel plan
 - `GET /` - Get my travel plans
+- `GET /public` - Get public travel plans (no auth)
 - `GET /:id` - Get single travel plan
 - `PATCH /:id` - Update travel plan
 - `DELETE /:id` - Delete travel plan
+- `GET /admin` - Get all travel plans (admin, all visibility, with filters/search)
+- `PATCH /admin/:id` - Update any travel plan (admin)
+- `DELETE /admin/:id` - Delete any travel plan (admin)
 
 ### 👥 Trip Members (`/api/v1/trip-members`)
 - `POST /` - Add member to travel plan
