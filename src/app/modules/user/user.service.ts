@@ -1,8 +1,6 @@
 import { Prisma, Role, UserStatus } from "@prisma/client";
 import httpStatus from "http-status";
-import { promises as fs } from "fs";
 import ApiError from "../../errors/ApiError";
-import cloudinary from "../../helper/cloudinary";
 import {
   paginationHelper,
   IPaginationOptions,
@@ -63,6 +61,9 @@ const updateMyProfile = async (
   if (payload.visitedCountries !== undefined) {
     data.visitedCountries = payload.visitedCountries;
   }
+  if (payload.profileImage !== undefined) {
+    data.profileImage = payload.profileImage;
+  }
 
   return prisma.user.update({
     where: {
@@ -75,39 +76,26 @@ const updateMyProfile = async (
 
 const updateProfilePhoto = async (
   authUser: TAuthUser,
-  file?: Express.Multer.File
+  profileImageUrl?: string
 ) => {
-  if (!file) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "No file provided.");
+  if (!profileImageUrl) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Profile image URL is required.");
   }
 
-  try {
-    const uploadResult = await cloudinary.uploader.upload(file.path, {
-      folder: "travel-buddy/profile",
-      public_id: `travel-buddy/profile/${authUser.userId}`,
-      overwrite: true,
-      transformation: [
-        { width: 600, height: 600, crop: "fill", gravity: "face" },
-      ],
-    });
+  const user = await prisma.user.update({
+    where: {
+      id: authUser.userId,
+    },
+    data: {
+      profileImage: profileImageUrl,
+    },
+    select: {
+      id: true,
+      profileImage: true,
+    },
+  });
 
-    const user = await prisma.user.update({
-      where: {
-        id: authUser.userId,
-      },
-      data: {
-        profileImage: uploadResult.secure_url,
-      },
-      select: {
-        id: true,
-        profileImage: true,
-      },
-    });
-
-    return user;
-  } finally {
-    await fs.unlink(file.path).catch(() => undefined);
-  }
+  return user;
 };
 
 const normalizeOrder = (sortOrder: string | undefined): Prisma.SortOrder =>

@@ -30,7 +30,8 @@ const createTravelPlanSchema = z.object({
     ),
     visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
     description: z.string().optional(),
-    coverPhoto: z.string().optional(),
+    coverPhoto: z.string().url({ message: "Cover photo must be a valid URL." }).optional(),
+    galleryImages: z.array(z.string().url({ message: "Each gallery image must be a valid URL." })).optional(),
   }),
 });
 
@@ -67,7 +68,8 @@ const updateTravelPlanSchema = z.object({
     ),
     visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
     description: z.string().optional(),
-    coverPhoto: z.string().optional(),
+    coverPhoto: z.string().url({ message: "Cover photo must be a valid URL." }).optional(),
+    galleryImages: z.array(z.string().url({ message: "Each gallery image must be a valid URL." })).optional(),
   }),
 });
 
@@ -133,7 +135,8 @@ const adminUpdateTravelPlanSchema = z.object({
     ),
     visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
     description: z.string().optional(),
-    coverPhoto: z.string().optional(),
+    coverPhoto: z.string().url({ message: "Cover photo must be a valid URL." }).optional(),
+    galleryImages: z.array(z.string().url({ message: "Each gallery image must be a valid URL." })).optional(),
   }),
 });
 

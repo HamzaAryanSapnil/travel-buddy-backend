@@ -6,8 +6,7 @@ import { TAuthUser } from "./travelPlan.interface";
 
 const createTravelPlan = catchAsync(async (req, res) => {
     const authUser = req.user as TAuthUser;
-    const files = req.files as Express.Multer.File[] | undefined;
-    const result = await TravelPlanService.createTravelPlan(authUser, req.body, files);
+    const result = await TravelPlanService.createTravelPlan(authUser, req.body);
 
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
@@ -56,12 +55,10 @@ const getSingleTravelPlan = catchAsync(async (req, res) => {
 
 const updateTravelPlan = catchAsync(async (req, res) => {
     const authUser = req.user as TAuthUser;
-    const files = req.files as Express.Multer.File[] | undefined;
     const result = await TravelPlanService.updateTravelPlan(
         authUser,
         req.params.id,
-        req.body,
-        files
+        req.body
     );
 
     sendResponse(res, {
@@ -98,11 +95,9 @@ const getAllTravelPlans = catchAsync(async (req, res) => {
 });
 
 const adminUpdateTravelPlan = catchAsync(async (req, res) => {
-    const files = req.files as Express.Multer.File[] | undefined;
     const result = await TravelPlanService.adminUpdateTravelPlan(
         req.params.id,
-        req.body,
-        files
+        req.body
     );
 
     sendResponse(res, {

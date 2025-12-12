@@ -1,7 +1,5 @@
 import { ChatThreadType, NotificationType, PlanVisibility, Prisma, TripRole, TripStatus } from "@prisma/client";
 import httpStatus from "http-status";
-import fs from "fs/promises";
-import cloudinary from "../../config/cloudinary.config";
 import ApiError from "../../errors/ApiError";
 import {
   paginationHelper,
@@ -86,8 +84,7 @@ const assertCanViewPlan = async (authUser: TAuthUser | null, planId: string) => 
 
 const createTravelPlan = async (
   authUser: TAuthUser,
-  payload: TTravelPlanCreatePayload,
-  files?: Express.Multer.File[]
+  payload: TTravelPlanCreatePayload
 ) => {
   const startDate = new Date(payload.startDate);
   const endDate = new Date(payload.endDate);
@@ -111,40 +108,8 @@ const createTravelPlan = async (
     );
   }
 
-  let coverPhotoUrl = payload.coverPhoto;
-  const galleryUrls: string[] = [];
-
-  // Upload files to Cloudinary
-  if (files && files.length > 0) {
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const uploadResult = await cloudinary.uploader.upload(file.path, {
-          folder: `travel-buddy/plans`,
-          resource_type: "image",
-        });
-
-        // First file is coverPhoto
-        if (i === 0) {
-          coverPhotoUrl = uploadResult.secure_url;
-        } else {
-          galleryUrls.push(uploadResult.secure_url);
-        }
-
-        // Clean up temp file
-        try {
-          await fs.unlink(file.path);
-        } catch (err) {
-          // Ignore cleanup errors
-        }
-      }
-    } catch (error: any) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        `Image upload failed: ${error.message}`
-      );
-    }
-  }
+  const coverPhotoUrl = payload.coverPhoto;
+  const galleryUrls = payload.galleryImages || [];
 
   const result = await prisma.$transaction(async (tx) => {
     const plan = await tx.travelPlan.create({
@@ -199,7 +164,7 @@ const createTravelPlan = async (
           ownerId: authUser.userId,
           planId: plan.id,
           url,
-          provider: "cloudinary",
+          provider: "imgbb",
           type: "photo",
         })),
       });
@@ -460,8 +425,7 @@ const getSingleTravelPlan = async (authUser: TAuthUser | null, id: string) => {
 const updateTravelPlan = async (
   authUser: TAuthUser,
   id: string,
-  payload: TTravelPlanUpdatePayload,
-  files?: Express.Multer.File[]
+  payload: TTravelPlanUpdatePayload
 ) => {
   const existing = await assertCanModifyPlan(authUser, id);
 
@@ -494,52 +458,25 @@ const updateTravelPlan = async (
     }
   }
 
-  // Upload files to Cloudinary if provided
-  if (files && files.length > 0) {
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const uploadResult = await cloudinary.uploader.upload(file.path, {
-          folder: `travel-buddy/plans`,
-          resource_type: "image",
-        });
-
-        // First file is coverPhoto
-        if (i === 0) {
-          data.coverPhoto = uploadResult.secure_url;
-        } else {
-          // Additional images are added to media/gallery
-          await prisma.media.create({
-            data: {
-              ownerId: authUser.userId,
-              planId: id,
-              url: uploadResult.secure_url,
-              provider: "cloudinary",
-              type: "photo",
-            },
-          });
-        }
-
-        // Clean up temp file
-        try {
-          await fs.unlink(file.path);
-        } catch (err) {
-          // Ignore cleanup errors
-        }
-      }
-    } catch (error: any) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        `Image upload failed: ${error.message}`
-      );
-    }
+  // Handle gallery images if provided
+  if (payload.galleryImages && payload.galleryImages.length > 0) {
+    // Create media records for gallery images
+    await prisma.media.createMany({
+      data: payload.galleryImages.map(url => ({
+        ownerId: authUser.userId,
+        planId: id,
+        url,
+        provider: "imgbb",
+        type: "photo",
+      })),
+    });
   }
 
   if (payload.title !== undefined) data.title = payload.title;
   if (payload.destination !== undefined) data.destination = payload.destination;
   if (payload.origin !== undefined) data.origin = payload.origin;
   if (payload.description !== undefined) data.description = payload.description;
-  if (payload.coverPhoto !== undefined && !files) data.coverPhoto = payload.coverPhoto;
+  if (payload.coverPhoto !== undefined) data.coverPhoto = payload.coverPhoto;
   if (payload.budgetMin !== undefined) data.budgetMin = Number(payload.budgetMin);
   if (payload.budgetMax !== undefined) data.budgetMax = Number(payload.budgetMax);
 
@@ -750,8 +687,7 @@ const getAllTravelPlans = async (query: TTravelPlanQuery) => {
 
 const adminUpdateTravelPlan = async (
   id: string,
-  payload: TTravelPlanUpdatePayload,
-  files?: Express.Multer.File[]
+  payload: TTravelPlanUpdatePayload
 ) => {
   // Check if plan exists (no permission check for admin)
   const existing = await prisma.travelPlan.findUnique({
@@ -764,52 +700,25 @@ const adminUpdateTravelPlan = async (
 
   const data: Prisma.TravelPlanUpdateInput = {};
 
-  // Upload files to Cloudinary if provided
-  if (files && files.length > 0) {
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const uploadResult = await cloudinary.uploader.upload(file.path, {
-          folder: `travel-buddy/plans`,
-          resource_type: "image",
-        });
-
-        // First file is coverPhoto
-        if (i === 0) {
-          data.coverPhoto = uploadResult.secure_url;
-        } else {
-          // Additional images are added to media/gallery
-          await prisma.media.create({
-            data: {
-              ownerId: existing.ownerId,
-              planId: id,
-              url: uploadResult.secure_url,
-              provider: "cloudinary",
-              type: "photo",
-            },
-          });
-        }
-
-        // Clean up temp file
-        try {
-          await fs.unlink(file.path);
-        } catch (err) {
-          // Ignore cleanup errors
-        }
-      }
-    } catch (error: any) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        `Image upload failed: ${error.message}`
-      );
-    }
+  // Handle gallery images if provided
+  if (payload.galleryImages && payload.galleryImages.length > 0) {
+    // Create media records for gallery images
+    await prisma.media.createMany({
+      data: payload.galleryImages.map(url => ({
+        ownerId: existing.ownerId,
+        planId: id,
+        url,
+        provider: "imgbb",
+        type: "photo",
+      })),
+    });
   }
 
   if (payload.title !== undefined) data.title = payload.title;
   if (payload.destination !== undefined) data.destination = payload.destination;
   if (payload.origin !== undefined) data.origin = payload.origin;
   if (payload.description !== undefined) data.description = payload.description;
-  if (payload.coverPhoto !== undefined && !files) data.coverPhoto = payload.coverPhoto;
+  if (payload.coverPhoto !== undefined) data.coverPhoto = payload.coverPhoto;
   if (payload.budgetMin !== undefined) data.budgetMin = Number(payload.budgetMin);
   if (payload.budgetMax !== undefined) data.budgetMax = Number(payload.budgetMax);
 

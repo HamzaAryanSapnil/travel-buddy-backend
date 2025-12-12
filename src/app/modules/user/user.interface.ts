@@ -4,6 +4,7 @@ export type TUserProfileUpdate = {
     location?: string;
     interests?: string[];
     visitedCountries?: string[];
+    profileImage?: string;
 };
 
 export type TAuthUser = {

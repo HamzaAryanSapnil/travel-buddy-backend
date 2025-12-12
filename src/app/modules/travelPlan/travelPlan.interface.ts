@@ -18,6 +18,7 @@ export type TTravelPlanCreatePayload = {
     visibility?: PlanVisibility;
     description?: string;
     coverPhoto?: string;
+    galleryImages?: string[];
 };
 
 export type TTravelPlanUpdatePayload = Partial<Omit<TTravelPlanCreatePayload,
@@ -25,6 +26,7 @@ export type TTravelPlanUpdatePayload = Partial<Omit<TTravelPlanCreatePayload,
     startDate?: string;
     endDate?: string;
     travelType?: TravelType;
+    galleryImages?: string[];
 };
 
 export type TTravelPlanQuery = {

@@ -31,7 +31,8 @@ const updateMyProfile = catchAsync(async (req, res) => {
 
 const updateProfilePhoto = catchAsync(async (req, res) => {
     const authUser = req.user as TAuthUser;
-    const result = await UserService.updateProfilePhoto(authUser, req.file);
+    const { profileImage } = req.body;
+    const result = await UserService.updateProfilePhoto(authUser, profileImage);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

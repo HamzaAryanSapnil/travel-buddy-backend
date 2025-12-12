@@ -16,7 +16,8 @@ const updateProfileSchema = z.object({
             .max(120, { message: "Location cannot exceed 120 characters." })
             .optional(),
         interests: z.array(stringRequired("Interest must be a string.")).optional(),
-        visitedCountries: z.array(stringRequired("Country must be a string.")).optional()
+        visitedCountries: z.array(stringRequired("Country must be a string.")).optional(),
+        profileImage: z.string().url({ message: "Profile image must be a valid URL." }).optional()
     })
 });
 
@@ -51,8 +52,15 @@ const adminUpdateRoleSchema = z.object({
     })
 });
 
+const updateProfilePhotoSchema = z.object({
+    body: z.object({
+        profileImage: z.string().url({ message: "Profile image must be a valid URL." })
+    })
+});
+
 export const UserValidation = {
     updateProfile: updateProfileSchema,
+    updateProfilePhoto: updateProfilePhotoSchema,
     adminUpdateStatus: adminUpdateStatusSchema,
     adminVerifyUser: adminVerifyUserSchema,
     adminUpdateRole: adminUpdateRoleSchema

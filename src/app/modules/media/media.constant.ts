@@ -13,7 +13,7 @@ export const mediaSearchableFields: string[] = []; // No searchable fields
 export const mediaTypeEnum = ["photo", "video"] as const;
 
 // Media Provider Enum
-export const mediaProviderEnum = ["cloudinary"] as const;
+export const mediaProviderEnum = ["cloudinary", "imgbb"] as const;
 
 // Allowed image MIME types
 export const allowedImageTypes = [

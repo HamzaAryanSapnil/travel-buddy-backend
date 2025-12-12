@@ -5,6 +5,7 @@ export type TAuthUser = {
 };
 
 export type TMediaCreatePayload = {
+  imageUrls: string[];
   planId?: string;
   meetupId?: string;
   itineraryItemId?: string;

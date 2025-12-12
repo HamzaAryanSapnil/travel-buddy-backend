@@ -6,10 +6,9 @@ import { TAuthUser } from "./media.interface";
 
 const uploadMedia = catchAsync(async (req, res) => {
   const authUser = req.user as TAuthUser;
-  const files = req.files as Express.Multer.File[];
   const payload = req.body;
 
-  const result = await MediaService.uploadMedia(authUser, files, payload);
+  const result = await MediaService.uploadMedia(authUser, payload);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,

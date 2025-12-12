@@ -1,18 +1,15 @@
 import express from "express";
 import auth from "../../middlewares/auth";
 import validateRequest from "../../middlewares/validateRequest";
-import { upload } from "../../middlewares/upload";
 import { MediaController } from "./media.controller";
 import { MediaValidation } from "./media.validation";
-import { maxFilesPerUpload } from "./media.constant";
 
 const router = express.Router();
 
-// Upload media (multiple files)
+// Upload media (multiple image URLs)
 router.post(
   "/",
   auth("USER", "ADMIN"),
-  upload.array("files", maxFilesPerUpload),
   validateRequest(MediaValidation.uploadMedia),
   MediaController.uploadMedia
 );

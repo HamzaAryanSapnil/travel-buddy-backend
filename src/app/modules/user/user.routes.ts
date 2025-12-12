@@ -1,7 +1,6 @@
 import express from "express";
 import auth from "../../middlewares/auth";
 import validateRequest from "../../middlewares/validateRequest";
-import { upload } from "../../middlewares/upload";
 import { UserController } from "./user.controller";
 import { UserValidation } from "./user.validation";
 
@@ -36,7 +35,7 @@ router.patch(
 router.patch(
   "/me/profile-image",
   auth("USER", "ADMIN"),
-  upload.single("profileImage"),
+  validateRequest(UserValidation.updateProfilePhoto),
   UserController.updateProfilePhoto
 );
 

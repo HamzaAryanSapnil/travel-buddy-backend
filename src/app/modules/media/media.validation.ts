@@ -5,6 +5,10 @@ const stringRequired = (message: string) => z.string({ error: () => message });
 
 const uploadMediaSchema = z.object({
   body: z.object({
+    imageUrls: z
+      .array(z.string().url({ message: "Each image URL must be a valid URL." }))
+      .min(1, { message: "At least one image URL is required." })
+      .max(10, { message: "Maximum 10 images can be uploaded at once." }),
     planId: stringRequired("Plan ID must be a string.")
       .uuid({ message: "Plan ID must be a valid UUID." })
       .optional(),
