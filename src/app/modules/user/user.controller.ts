@@ -1,6 +1,7 @@
 import httpStatus from "http-status";
 import catchAsync from "../../shared/catchAsync";
 import sendResponse from "../../shared/sendResponse";
+import ApiError from "../../errors/ApiError";
 import { UserService } from "./user.service";
 import { TAuthUser } from "./user.interface";
 
@@ -79,7 +80,18 @@ const getAllUsers = catchAsync(async (req, res) => {
 });
 
 const updateUserStatus = catchAsync(async (req, res) => {
-    const result = await UserService.updateUserStatus(req.params.id, req.body.status);
+    const authUser = req.user as TAuthUser;
+    const userId = req.params.id;
+
+    // Prevent admin from modifying their own status
+    if (authUser.userId === userId) {
+        throw new ApiError(
+            httpStatus.FORBIDDEN,
+            "You cannot modify your own status."
+        );
+    }
+
+    const result = await UserService.updateUserStatus(userId, req.body.status);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -90,7 +102,18 @@ const updateUserStatus = catchAsync(async (req, res) => {
 });
 
 const verifyUser = catchAsync(async (req, res) => {
-    const result = await UserService.verifyUser(req.params.id, req.body.isVerified);
+    const authUser = req.user as TAuthUser;
+    const userId = req.params.id;
+
+    // Prevent admin from modifying their own verification status
+    if (authUser.userId === userId) {
+        throw new ApiError(
+            httpStatus.FORBIDDEN,
+            "You cannot modify your own verification status."
+        );
+    }
+
+    const result = await UserService.verifyUser(userId, req.body.isVerified);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -101,7 +124,18 @@ const verifyUser = catchAsync(async (req, res) => {
 });
 
 const updateUserRole = catchAsync(async (req, res) => {
-    const result = await UserService.updateUserRole(req.params.id, req.body.role);
+    const authUser = req.user as TAuthUser;
+    const userId = req.params.id;
+
+    // Prevent admin from changing their own role
+    if (authUser.userId === userId) {
+        throw new ApiError(
+            httpStatus.FORBIDDEN,
+            "You cannot change your own role."
+        );
+    }
+
+    const result = await UserService.updateUserRole(userId, req.body.role);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -112,7 +146,18 @@ const updateUserRole = catchAsync(async (req, res) => {
 });
 
 const softDeleteUser = catchAsync(async (req, res) => {
-    const result = await UserService.softDeleteUser(req.params.id);
+    const authUser = req.user as TAuthUser;
+    const userId = req.params.id;
+
+    // Prevent admin from deleting their own account
+    if (authUser.userId === userId) {
+        throw new ApiError(
+            httpStatus.FORBIDDEN,
+            "You cannot delete your own account."
+        );
+    }
+
+    const result = await UserService.softDeleteUser(userId);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

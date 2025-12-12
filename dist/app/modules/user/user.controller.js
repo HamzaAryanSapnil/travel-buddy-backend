@@ -16,6 +16,7 @@ exports.UserController = void 0;
 const http_status_1 = __importDefault(require("http-status"));
 const catchAsync_1 = __importDefault(require("../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../shared/sendResponse"));
+const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const user_service_1 = require("./user.service");
 const getMyProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
@@ -80,7 +81,13 @@ const getAllUsers = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
     });
 }));
 const updateUserStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield user_service_1.UserService.updateUserStatus(req.params.id, req.body.status);
+    const authUser = req.user;
+    const userId = req.params.id;
+    // Prevent admin from modifying their own status
+    if (authUser.userId === userId) {
+        throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "You cannot modify your own status.");
+    }
+    const result = yield user_service_1.UserService.updateUserStatus(userId, req.body.status);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
@@ -89,7 +96,13 @@ const updateUserStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 
     });
 }));
 const verifyUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield user_service_1.UserService.verifyUser(req.params.id, req.body.isVerified);
+    const authUser = req.user;
+    const userId = req.params.id;
+    // Prevent admin from modifying their own verification status
+    if (authUser.userId === userId) {
+        throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "You cannot modify your own verification status.");
+    }
+    const result = yield user_service_1.UserService.verifyUser(userId, req.body.isVerified);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
@@ -98,7 +111,13 @@ const verifyUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
     });
 }));
 const updateUserRole = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield user_service_1.UserService.updateUserRole(req.params.id, req.body.role);
+    const authUser = req.user;
+    const userId = req.params.id;
+    // Prevent admin from changing their own role
+    if (authUser.userId === userId) {
+        throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "You cannot change your own role.");
+    }
+    const result = yield user_service_1.UserService.updateUserRole(userId, req.body.role);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
@@ -107,7 +126,13 @@ const updateUserRole = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
     });
 }));
 const softDeleteUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield user_service_1.UserService.softDeleteUser(req.params.id);
+    const authUser = req.user;
+    const userId = req.params.id;
+    // Prevent admin from deleting their own account
+    if (authUser.userId === userId) {
+        throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "You cannot delete your own account.");
+    }
+    const result = yield user_service_1.UserService.softDeleteUser(userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
