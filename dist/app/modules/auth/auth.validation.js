@@ -4,10 +4,7 @@ exports.AuthValidation = void 0;
 const zod_1 = require("zod");
 const registerValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
-        email: zod_1.z
-            .string()
-            .min(1, { message: "Email is required!" })
-            .email({ message: "Invalid email address format." }),
+        email: zod_1.z.email({ message: "Invalid email address format." }),
         password: zod_1.z
             .string()
             .min(1, { message: "Password is required!" })
@@ -22,20 +19,15 @@ const registerValidationSchema = zod_1.z.object({
             message: "Password must contain at least 1 number.",
         }),
         fullName: zod_1.z
-            .string()
-            .min(1, { message: "Full name is required!" })
+            .string({ error: "Full name is required!" })
             .min(2, { message: "Full name must be at least 2 characters long." })
-            .max(100, { message: "Full name cannot exceed 100 characters." })
-            .optional(),
+            .max(100, { message: "Full name cannot exceed 100 characters." }),
     }),
 });
 const loginValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
-        email: zod_1.z
-            .string()
-            .min(1, { message: "Email is required!" })
-            .email({ message: "Invalid email address format." }),
-        password: zod_1.z.string().min(1, { message: "Password is required!" }),
+        email: zod_1.z.email({ message: "Invalid email address format." }),
+        password: zod_1.z.string({ error: "Password is required!" }),
     }),
 });
 exports.AuthValidation = {

@@ -19,8 +19,7 @@ const sendResponse_1 = __importDefault(require("../../shared/sendResponse"));
 const travelPlan_service_1 = require("./travelPlan.service");
 const createTravelPlan = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
-    const files = req.files;
-    const result = yield travelPlan_service_1.TravelPlanService.createTravelPlan(authUser, req.body, files);
+    const result = yield travelPlan_service_1.TravelPlanService.createTravelPlan(authUser, req.body);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.CREATED,
         success: true,
@@ -61,8 +60,7 @@ const getSingleTravelPlan = (0, catchAsync_1.default)((req, res) => __awaiter(vo
 }));
 const updateTravelPlan = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
-    const files = req.files;
-    const result = yield travelPlan_service_1.TravelPlanService.updateTravelPlan(authUser, req.params.id, req.body, files);
+    const result = yield travelPlan_service_1.TravelPlanService.updateTravelPlan(authUser, req.params.id, req.body);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
@@ -92,8 +90,7 @@ const getAllTravelPlans = (0, catchAsync_1.default)((req, res) => __awaiter(void
     });
 }));
 const adminUpdateTravelPlan = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const files = req.files;
-    const result = yield travelPlan_service_1.TravelPlanService.adminUpdateTravelPlan(req.params.id, req.body, files);
+    const result = yield travelPlan_service_1.TravelPlanService.adminUpdateTravelPlan(req.params.id, req.body);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,

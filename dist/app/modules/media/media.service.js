@@ -14,29 +14,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MediaService = void 0;
 const client_1 = require("@prisma/client");
-const promises_1 = __importDefault(require("fs/promises"));
 const http_status_1 = __importDefault(require("http-status"));
-const cloudinary_1 = __importDefault(require("../../helper/cloudinary"));
 const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const paginationHelper_1 = require("../../helper/paginationHelper");
 const prisma_1 = require("../../shared/prisma");
 const pick_1 = __importDefault(require("../../shared/pick"));
 const media_constant_1 = require("./media.constant");
-/**
- * Helper: Get Cloudinary folder path based on entity type
- */
-const getCloudinaryFolder = (planId, meetupId, itineraryItemId) => {
-    if (planId) {
-        return `travel-buddy/plans/${planId}`;
-    }
-    if (meetupId) {
-        return `travel-buddy/meetups/${meetupId}`;
-    }
-    if (itineraryItemId) {
-        return `travel-buddy/itinerary/${itineraryItemId}`;
-    }
-    return "travel-buddy/media";
-};
 /**
  * Helper: Verify user owns the plan
  */
@@ -165,13 +148,12 @@ const verifyMediaAccess = (authUser, media) => __awaiter(void 0, void 0, void 0,
     throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "You don't have permission to view this media.");
 });
 /**
- * Upload media files
+ * Upload media from image URLs
  * @param authUser - Authenticated user
- * @param files - Array of uploaded files
- * @param payload - Media creation payload
+ * @param payload - Media creation payload with image URLs
  * @returns Upload response with created media
  */
-const uploadMedia = (authUser, files, payload) => __awaiter(void 0, void 0, void 0, function* () {
+const uploadMedia = (authUser, payload) => __awaiter(void 0, void 0, void 0, function* () {
     // Validate at least one entity ID is provided
     if (!payload.planId && !payload.meetupId && !payload.itineraryItemId) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "At least one of planId, meetupId, or itineraryItemId must be provided.");
@@ -186,49 +168,29 @@ const uploadMedia = (authUser, files, payload) => __awaiter(void 0, void 0, void
     if (payload.itineraryItemId) {
         yield verifyItineraryItemOwnership(authUser, payload.itineraryItemId);
     }
-    // Validate files
-    if (!files || files.length === 0) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "No files provided.");
+    // Validate image URLs
+    if (!payload.imageUrls || payload.imageUrls.length === 0) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "No image URLs provided.");
     }
-    if (files.length > 10) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Maximum 10 files can be uploaded at once.");
+    if (payload.imageUrls.length > 10) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Maximum 10 images can be uploaded at once.");
     }
-    // Validate file types and sizes
-    const invalidFiles = [];
-    for (const file of files) {
-        if (!media_constant_1.allowedImageTypes.includes(file.mimetype)) {
-            invalidFiles.push(`${file.originalname}: Invalid file type. Supported formats: JPEG, PNG, WebP, GIF, SVG, BMP, TIFF, HEIC, HEIF, ICO.`);
-        }
-        if (file.size > media_constant_1.maxFileSize) {
-            invalidFiles.push(`${file.originalname}: File size exceeds 5MB limit.`);
-        }
-    }
-    if (invalidFiles.length > 0) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, `Invalid files: ${invalidFiles.join(" ")}`);
-    }
-    // Get Cloudinary folder
-    const folder = getCloudinaryFolder(payload.planId, payload.meetupId, payload.itineraryItemId);
     const uploadedMedia = [];
     const errors = [];
     let uploadedCount = 0;
     let failedCount = 0;
-    // Upload each file
-    for (const file of files) {
+    // Create media records for each URL
+    for (const imageUrl of payload.imageUrls) {
         try {
-            // Upload to Cloudinary
-            const uploadResult = yield cloudinary_1.default.uploader.upload(file.path, {
-                folder,
-                resource_type: "image",
-            });
-            // Create media record
+            // Create media record directly with URL
             const media = yield prisma_1.prisma.media.create({
                 data: {
                     ownerId: authUser.userId,
                     planId: payload.planId || null,
                     meetupId: payload.meetupId || null,
                     itineraryItemId: payload.itineraryItemId || null,
-                    url: uploadResult.secure_url,
-                    provider: "cloudinary",
+                    url: imageUrl,
+                    provider: "imgbb",
                     type: payload.type || "photo",
                 },
                 include: {
@@ -267,21 +229,12 @@ const uploadMedia = (authUser, files, payload) => __awaiter(void 0, void 0, void
             uploadedCount++;
         }
         catch (error) {
-            errors.push(`${file.originalname}: ${error.message || "Upload failed"}`);
+            errors.push(`${imageUrl}: ${error.message || "Failed to create media record"}`);
             failedCount++;
-        }
-        finally {
-            // Clean up temporary file
-            try {
-                yield promises_1.default.unlink(file.path);
-            }
-            catch (_a) {
-                // Ignore errors
-            }
         }
     }
     return {
-        message: `Uploaded ${uploadedCount} file(s), ${failedCount} failed.`,
+        message: `Uploaded ${uploadedCount} image(s), ${failedCount} failed.`,
         uploadedCount,
         failedCount,
         media: uploadedMedia,
@@ -462,29 +415,17 @@ const getMediaList = (authUser, query) => __awaiter(void 0, void 0, void 0, func
 const deleteMedia = (authUser, mediaId) => __awaiter(void 0, void 0, void 0, function* () {
     // Verify ownership
     yield verifyMediaOwnership(authUser, mediaId);
-    // Get media to extract Cloudinary public_id
+    // Get media to verify it exists
     const media = yield prisma_1.prisma.media.findUnique({
         where: { id: mediaId },
-        select: { id: true, url: true },
+        select: { id: true, url: true, provider: true },
     });
     if (!media) {
         throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Media not found.");
     }
-    // Extract public_id from Cloudinary URL
-    // URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{version}/{public_id}.{format}
-    const urlParts = media.url.split("/");
-    const filename = urlParts[urlParts.length - 1];
-    const publicId = filename.split(".")[0];
-    const folderMatch = media.url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
-    const fullPublicId = folderMatch ? folderMatch[1].split(".")[0] : publicId;
-    try {
-        // Delete from Cloudinary
-        yield cloudinary_1.default.uploader.destroy(fullPublicId);
-    }
-    catch (error) {
-        // Log error but continue with database deletion
-        console.error("Failed to delete from Cloudinary:", error);
-    }
+    // Note: imgBB handles image deletion on their side
+    // For cloudinary images, deletion was handled separately
+    // We only need to delete from database
     // Delete from database
     yield prisma_1.prisma.media.delete({
         where: { id: mediaId },

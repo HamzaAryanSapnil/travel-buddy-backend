@@ -23,7 +23,8 @@ const createTravelPlanSchema = zod_1.z.object({
         budgetMax: zod_1.z.preprocess((val) => (val ? Number(val) : undefined), zod_1.z.number().optional()),
         visibility: zod_1.z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
         description: zod_1.z.string().optional(),
-        coverPhoto: zod_1.z.string().optional(),
+        coverPhoto: zod_1.z.string().url({ message: "Cover photo must be a valid URL." }).optional(),
+        galleryImages: zod_1.z.array(zod_1.z.string().url({ message: "Each gallery image must be a valid URL." })).optional(),
     }),
 });
 const updateTravelPlanSchema = zod_1.z.object({
@@ -51,7 +52,8 @@ const updateTravelPlanSchema = zod_1.z.object({
         budgetMax: zod_1.z.preprocess((val) => (val ? Number(val) : undefined), zod_1.z.number().optional()),
         visibility: zod_1.z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
         description: zod_1.z.string().optional(),
-        coverPhoto: zod_1.z.string().optional(),
+        coverPhoto: zod_1.z.string().url({ message: "Cover photo must be a valid URL." }).optional(),
+        galleryImages: zod_1.z.array(zod_1.z.string().url({ message: "Each gallery image must be a valid URL." })).optional(),
     }),
 });
 const getSingleTravelPlanSchema = zod_1.z.object({
@@ -106,7 +108,8 @@ const adminUpdateTravelPlanSchema = zod_1.z.object({
         budgetMax: zod_1.z.preprocess((val) => (val ? Number(val) : undefined), zod_1.z.number().optional()),
         visibility: zod_1.z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
         description: zod_1.z.string().optional(),
-        coverPhoto: zod_1.z.string().optional(),
+        coverPhoto: zod_1.z.string().url({ message: "Cover photo must be a valid URL." }).optional(),
+        galleryImages: zod_1.z.array(zod_1.z.string().url({ message: "Each gallery image must be a valid URL." })).optional(),
     }),
 });
 exports.TravelPlanValidation = {

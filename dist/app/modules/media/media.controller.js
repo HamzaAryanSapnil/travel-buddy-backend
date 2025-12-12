@@ -19,9 +19,8 @@ const sendResponse_1 = __importDefault(require("../../shared/sendResponse"));
 const media_service_1 = require("./media.service");
 const uploadMedia = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authUser = req.user;
-    const files = req.files;
     const payload = req.body;
-    const result = yield media_service_1.MediaService.uploadMedia(authUser, files, payload);
+    const result = yield media_service_1.MediaService.uploadMedia(authUser, payload);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.CREATED,
         success: true,

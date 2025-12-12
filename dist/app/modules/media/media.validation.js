@@ -6,6 +6,10 @@ const media_constant_1 = require("./media.constant");
 const stringRequired = (message) => zod_1.z.string({ error: () => message });
 const uploadMediaSchema = zod_1.z.object({
     body: zod_1.z.object({
+        imageUrls: zod_1.z
+            .array(zod_1.z.string().url({ message: "Each image URL must be a valid URL." }))
+            .min(1, { message: "At least one image URL is required." })
+            .max(10, { message: "Maximum 10 images can be uploaded at once." }),
         planId: stringRequired("Plan ID must be a string.")
             .uuid({ message: "Plan ID must be a valid UUID." })
             .optional(),

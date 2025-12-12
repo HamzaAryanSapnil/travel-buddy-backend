@@ -25,9 +25,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 const http_status_1 = __importDefault(require("http-status"));
-const fs_1 = require("fs");
 const ApiError_1 = __importDefault(require("../../errors/ApiError"));
-const cloudinary_1 = __importDefault(require("../../helper/cloudinary"));
 const paginationHelper_1 = require("../../helper/paginationHelper");
 const prisma_1 = require("../../shared/prisma");
 const pick_1 = __importDefault(require("../../shared/pick"));
@@ -38,6 +36,7 @@ const defaultUserSelect = {
     fullName: true,
     profileImage: true,
     bio: true,
+    role: true,
     location: true,
     interests: true,
     visitedCountries: true,
@@ -71,6 +70,9 @@ const updateMyProfile = (authUser, payload) => __awaiter(void 0, void 0, void 0,
     if (payload.visitedCountries !== undefined) {
         data.visitedCountries = payload.visitedCountries;
     }
+    if (payload.profileImage !== undefined) {
+        data.profileImage = payload.profileImage;
+    }
     return prisma_1.prisma.user.update({
         where: {
             id: authUser.userId,
@@ -79,36 +81,23 @@ const updateMyProfile = (authUser, payload) => __awaiter(void 0, void 0, void 0,
         select: defaultUserSelect,
     });
 });
-const updateProfilePhoto = (authUser, file) => __awaiter(void 0, void 0, void 0, function* () {
-    if (!file) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "No file provided.");
+const updateProfilePhoto = (authUser, profileImageUrl) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!profileImageUrl) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Profile image URL is required.");
     }
-    try {
-        const uploadResult = yield cloudinary_1.default.uploader.upload(file.path, {
-            folder: "travel-buddy/profile",
-            public_id: `travel-buddy/profile/${authUser.userId}`,
-            overwrite: true,
-            transformation: [
-                { width: 600, height: 600, crop: "fill", gravity: "face" },
-            ],
-        });
-        const user = yield prisma_1.prisma.user.update({
-            where: {
-                id: authUser.userId,
-            },
-            data: {
-                profileImage: uploadResult.secure_url,
-            },
-            select: {
-                id: true,
-                profileImage: true,
-            },
-        });
-        return user;
-    }
-    finally {
-        yield fs_1.promises.unlink(file.path).catch(() => undefined);
-    }
+    const user = yield prisma_1.prisma.user.update({
+        where: {
+            id: authUser.userId,
+        },
+        data: {
+            profileImage: profileImageUrl,
+        },
+        select: {
+            id: true,
+            profileImage: true,
+        },
+    });
+    return user;
 });
 const normalizeOrder = (sortOrder) => sortOrder === "asc" ? "asc" : "desc";
 const buildOrderBy = (sortBy, sortOrder) => ({

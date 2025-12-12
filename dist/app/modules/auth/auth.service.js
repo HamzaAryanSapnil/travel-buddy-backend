@@ -36,6 +36,7 @@ const register = (payload) => __awaiter(void 0, void 0, void 0, function* () {
         data: {
             email: payload.email,
             passwordHash: hashedPassword,
+            fullName: payload === null || payload === void 0 ? void 0 : payload.fullName,
         },
         select: {
             id: true,

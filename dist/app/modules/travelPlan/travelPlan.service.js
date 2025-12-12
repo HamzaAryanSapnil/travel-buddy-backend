@@ -26,8 +26,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TravelPlanService = void 0;
 const client_1 = require("@prisma/client");
 const http_status_1 = __importDefault(require("http-status"));
-const promises_1 = __importDefault(require("fs/promises"));
-const cloudinary_config_1 = __importDefault(require("../../config/cloudinary.config"));
 const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const paginationHelper_1 = require("../../helper/paginationHelper");
 const prisma_1 = require("../../shared/prisma");
@@ -71,7 +69,7 @@ const assertCanViewPlan = (authUser, planId) => __awaiter(void 0, void 0, void 0
     }
     return plan;
 });
-const createTravelPlan = (authUser, payload, files) => __awaiter(void 0, void 0, void 0, function* () {
+const createTravelPlan = (authUser, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const startDate = new Date(payload.startDate);
     const endDate = new Date(payload.endDate);
     const now = new Date();
@@ -84,37 +82,8 @@ const createTravelPlan = (authUser, payload, files) => __awaiter(void 0, void 0,
     if (endDate < startDate) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "endDate must be greater than or equal to startDate.");
     }
-    let coverPhotoUrl = payload.coverPhoto;
-    const galleryUrls = [];
-    // Upload files to Cloudinary
-    if (files && files.length > 0) {
-        try {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const uploadResult = yield cloudinary_config_1.default.uploader.upload(file.path, {
-                    folder: `travel-buddy/plans`,
-                    resource_type: "image",
-                });
-                // First file is coverPhoto
-                if (i === 0) {
-                    coverPhotoUrl = uploadResult.secure_url;
-                }
-                else {
-                    galleryUrls.push(uploadResult.secure_url);
-                }
-                // Clean up temp file
-                try {
-                    yield promises_1.default.unlink(file.path);
-                }
-                catch (err) {
-                    // Ignore cleanup errors
-                }
-            }
-        }
-        catch (error) {
-            throw new ApiError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, `Image upload failed: ${error.message}`);
-        }
-    }
+    const coverPhotoUrl = payload.coverPhoto;
+    const galleryUrls = payload.galleryImages || [];
     const result = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         const plan = yield tx.travelPlan.create({
@@ -165,7 +134,7 @@ const createTravelPlan = (authUser, payload, files) => __awaiter(void 0, void 0,
                     ownerId: authUser.userId,
                     planId: plan.id,
                     url,
-                    provider: "cloudinary",
+                    provider: "imgbb",
                     type: "photo",
                 })),
             });
@@ -357,7 +326,7 @@ const getSingleTravelPlan = (authUser, id) => __awaiter(void 0, void 0, void 0, 
     });
     return Object.assign(Object.assign({}, fullPlan), { totalDays: getTotalDays(fullPlan.startDate, fullPlan.endDate) });
 });
-const updateTravelPlan = (authUser, id, payload, files) => __awaiter(void 0, void 0, void 0, function* () {
+const updateTravelPlan = (authUser, id, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const existing = yield assertCanModifyPlan(authUser, id);
     // Get user's capabilities to enforce EDITOR restrictions
     const { capabilities } = yield tripMember_service_1.TripMemberService.getTripMemberPermission(authUser, id);
@@ -377,43 +346,18 @@ const updateTravelPlan = (authUser, id, payload, files) => __awaiter(void 0, voi
             throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "Editors can only modify description and cover photo.");
         }
     }
-    // Upload files to Cloudinary if provided
-    if (files && files.length > 0) {
-        try {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const uploadResult = yield cloudinary_config_1.default.uploader.upload(file.path, {
-                    folder: `travel-buddy/plans`,
-                    resource_type: "image",
-                });
-                // First file is coverPhoto
-                if (i === 0) {
-                    data.coverPhoto = uploadResult.secure_url;
-                }
-                else {
-                    // Additional images are added to media/gallery
-                    yield prisma_1.prisma.media.create({
-                        data: {
-                            ownerId: authUser.userId,
-                            planId: id,
-                            url: uploadResult.secure_url,
-                            provider: "cloudinary",
-                            type: "photo",
-                        },
-                    });
-                }
-                // Clean up temp file
-                try {
-                    yield promises_1.default.unlink(file.path);
-                }
-                catch (err) {
-                    // Ignore cleanup errors
-                }
-            }
-        }
-        catch (error) {
-            throw new ApiError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, `Image upload failed: ${error.message}`);
-        }
+    // Handle gallery images if provided
+    if (payload.galleryImages && payload.galleryImages.length > 0) {
+        // Create media records for gallery images
+        yield prisma_1.prisma.media.createMany({
+            data: payload.galleryImages.map(url => ({
+                ownerId: authUser.userId,
+                planId: id,
+                url,
+                provider: "imgbb",
+                type: "photo",
+            })),
+        });
     }
     if (payload.title !== undefined)
         data.title = payload.title;
@@ -423,7 +367,7 @@ const updateTravelPlan = (authUser, id, payload, files) => __awaiter(void 0, voi
         data.origin = payload.origin;
     if (payload.description !== undefined)
         data.description = payload.description;
-    if (payload.coverPhoto !== undefined && !files)
+    if (payload.coverPhoto !== undefined)
         data.coverPhoto = payload.coverPhoto;
     if (payload.budgetMin !== undefined)
         data.budgetMin = Number(payload.budgetMin);
@@ -569,7 +513,7 @@ const getAllTravelPlans = (query) => __awaiter(void 0, void 0, void 0, function*
         data: dataWithTotalDays,
     };
 });
-const adminUpdateTravelPlan = (id, payload, files) => __awaiter(void 0, void 0, void 0, function* () {
+const adminUpdateTravelPlan = (id, payload) => __awaiter(void 0, void 0, void 0, function* () {
     // Check if plan exists (no permission check for admin)
     const existing = yield prisma_1.prisma.travelPlan.findUnique({
         where: { id },
@@ -578,43 +522,18 @@ const adminUpdateTravelPlan = (id, payload, files) => __awaiter(void 0, void 0, 
         throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Travel plan not found.");
     }
     const data = {};
-    // Upload files to Cloudinary if provided
-    if (files && files.length > 0) {
-        try {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const uploadResult = yield cloudinary_config_1.default.uploader.upload(file.path, {
-                    folder: `travel-buddy/plans`,
-                    resource_type: "image",
-                });
-                // First file is coverPhoto
-                if (i === 0) {
-                    data.coverPhoto = uploadResult.secure_url;
-                }
-                else {
-                    // Additional images are added to media/gallery
-                    yield prisma_1.prisma.media.create({
-                        data: {
-                            ownerId: existing.ownerId,
-                            planId: id,
-                            url: uploadResult.secure_url,
-                            provider: "cloudinary",
-                            type: "photo",
-                        },
-                    });
-                }
-                // Clean up temp file
-                try {
-                    yield promises_1.default.unlink(file.path);
-                }
-                catch (err) {
-                    // Ignore cleanup errors
-                }
-            }
-        }
-        catch (error) {
-            throw new ApiError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, `Image upload failed: ${error.message}`);
-        }
+    // Handle gallery images if provided
+    if (payload.galleryImages && payload.galleryImages.length > 0) {
+        // Create media records for gallery images
+        yield prisma_1.prisma.media.createMany({
+            data: payload.galleryImages.map(url => ({
+                ownerId: existing.ownerId,
+                planId: id,
+                url,
+                provider: "imgbb",
+                type: "photo",
+            })),
+        });
     }
     if (payload.title !== undefined)
         data.title = payload.title;
@@ -624,7 +543,7 @@ const adminUpdateTravelPlan = (id, payload, files) => __awaiter(void 0, void 0, 
         data.origin = payload.origin;
     if (payload.description !== undefined)
         data.description = payload.description;
-    if (payload.coverPhoto !== undefined && !files)
+    if (payload.coverPhoto !== undefined)
         data.coverPhoto = payload.coverPhoto;
     if (payload.budgetMin !== undefined)
         data.budgetMin = Number(payload.budgetMin);

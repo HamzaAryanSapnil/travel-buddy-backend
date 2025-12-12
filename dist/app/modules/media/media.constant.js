@@ -13,7 +13,7 @@ exports.mediaSearchableFields = []; // No searchable fields
 // Media Type Enum
 exports.mediaTypeEnum = ["photo", "video"];
 // Media Provider Enum
-exports.mediaProviderEnum = ["cloudinary"];
+exports.mediaProviderEnum = ["cloudinary", "imgbb"];
 // Allowed image MIME types
 exports.allowedImageTypes = [
     "image/jpeg",
