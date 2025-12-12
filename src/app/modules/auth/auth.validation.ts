@@ -2,10 +2,7 @@ import { z } from "zod";
 
 const registerValidationSchema = z.object({
   body: z.object({
-    email: z
-      .string()
-      .min(1, { message: "Email is required!" })
-      .email({ message: "Invalid email address format." }),
+    email: z.email({ message: "Invalid email address format." }),
     password: z
       .string()
       .min(1, { message: "Password is required!" })
@@ -20,21 +17,16 @@ const registerValidationSchema = z.object({
         message: "Password must contain at least 1 number.",
       }),
     fullName: z
-      .string()
-      .min(1, { message: "Full name is required!" })
+      .string({ error: "Full name is required!" })
       .min(2, { message: "Full name must be at least 2 characters long." })
-      .max(100, { message: "Full name cannot exceed 100 characters." })
-      .optional(),
+      .max(100, { message: "Full name cannot exceed 100 characters." }),
   }),
 });
 
 const loginValidationSchema = z.object({
   body: z.object({
-    email: z
-      .string()
-      .min(1, { message: "Email is required!" })
-      .email({ message: "Invalid email address format." }),
-    password: z.string().min(1, { message: "Password is required!" }),
+    email: z.email({message: "Invalid email address format."}),
+    password: z.string({error: "Password is required!"}),
   }),
 });
 

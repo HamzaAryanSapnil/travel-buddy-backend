@@ -6,7 +6,7 @@ import ApiError from "../../errors/ApiError";
 import httpStatus from "http-status";
 import config from "../../../config";
 
-const register = async (payload: { email: string; password: string }) => {
+const register = async (payload: { email: string; password: string; fullName: string }) => {
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({
     where: {
@@ -32,6 +32,7 @@ const register = async (payload: { email: string; password: string }) => {
     data: {
       email: payload.email,
       passwordHash: hashedPassword,
+      fullName: payload?.fullName,
     },
     select: {
       id: true,

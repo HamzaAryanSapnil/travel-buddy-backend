@@ -34,9 +34,9 @@ router.patch(
 );
 
 router.patch(
-  "/me/photo",
+  "/me/profile-image",
   auth("USER", "ADMIN"),
-  upload.single("photo"),
+  upload.single("profileImage"),
   UserController.updateProfilePhoto
 );
 
