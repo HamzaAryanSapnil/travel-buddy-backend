@@ -23,6 +23,7 @@ const defaultUserSelect = {
   fullName: true,
   profileImage: true,
   bio: true,
+  role: true,
   location: true,
   interests: true,
   visitedCountries: true,

@@ -69,6 +69,7 @@ const getMyReviews = catchAsync(async (req, res) => {
 
 const getAllUsers = catchAsync(async (req, res) => {
     const result = await UserService.getAllUsers(req.query);
+    console.log("All Users From getAllUsers Controller in user.controller.ts: ", result);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
