@@ -22,6 +22,14 @@ router.get(
   PaymentController.getPaymentSummary
 );
 
+// Get payment statistics (admin only) - MUST be before /:id route
+router.get(
+  "/statistics",
+  auth("ADMIN"),
+  validateRequest(PaymentValidation.getPaymentStatistics),
+  PaymentController.getPaymentStatistics
+);
+
 // Get single payment
 router.get(
   "/:id",
@@ -29,20 +37,13 @@ router.get(
   validateRequest(PaymentValidation.getPayment),
   PaymentController.getPayment
 );
+
 // Get all payments (admin only)
 router.get(
   "/",
   auth("USER", "ADMIN"),
   validateRequest(PaymentValidation.getPayments),
   PaymentController.getPayments
-);
-
-// Get payment statistics (admin only)
-router.get(
-  "/statistics",
-  auth("USER", "ADMIN"),
-  validateRequest(PaymentValidation.getPaymentStatistics),
-  PaymentController.getPaymentStatistics
 );
 
 export const PaymentRoutes = router;

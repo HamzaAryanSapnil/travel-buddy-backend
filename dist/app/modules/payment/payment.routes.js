@@ -14,10 +14,10 @@ const router = express_1.default.Router();
 router.get("/my-payments", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(payment_validation_1.PaymentValidation.getMyPayments), payment_controller_1.PaymentController.getMyPayments);
 // Get payment summary
 router.get("/summary", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(payment_validation_1.PaymentValidation.getPaymentSummary), payment_controller_1.PaymentController.getPaymentSummary);
+// Get payment statistics (admin only) - MUST be before /:id route
+router.get("/statistics", (0, auth_1.default)("ADMIN"), (0, validateRequest_1.default)(payment_validation_1.PaymentValidation.getPaymentStatistics), payment_controller_1.PaymentController.getPaymentStatistics);
 // Get single payment
 router.get("/:id", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(payment_validation_1.PaymentValidation.getPayment), payment_controller_1.PaymentController.getPayment);
 // Get all payments (admin only)
 router.get("/", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(payment_validation_1.PaymentValidation.getPayments), payment_controller_1.PaymentController.getPayments);
-// Get payment statistics (admin only)
-router.get("/statistics", (0, auth_1.default)("USER", "ADMIN"), (0, validateRequest_1.default)(payment_validation_1.PaymentValidation.getPaymentStatistics), payment_controller_1.PaymentController.getPaymentStatistics);
 exports.PaymentRoutes = router;
