@@ -3,6 +3,7 @@ import auth from "../../middlewares/auth";
 import validateRequest from "../../middlewares/validateRequest";
 import { MediaController } from "./media.controller";
 import { MediaValidation } from "./media.validation";
+import optionalAuth from "../../middlewares/optionalAuth";
 
 const router = express.Router();
 
@@ -13,21 +14,27 @@ router.post(
   validateRequest(MediaValidation.uploadMedia),
   MediaController.uploadMedia
 );
-
-// Get single media
+// Public gallery (homepage) - NO AUTH REQUIRED
 router.get(
-  "/:id",
-  auth("USER", "ADMIN"),
-  validateRequest(MediaValidation.getMedia),
-  MediaController.getMedia
+  "/public/gallery",
+  validateRequest(MediaValidation.getPublicGallery),
+  MediaController.getPublicGallery
 );
 
 // Get media list
 router.get(
   "/",
-  auth("USER", "ADMIN"),
+  optionalAuth(),
   validateRequest(MediaValidation.getMediaList),
   MediaController.getMediaList
+);
+
+// Get single media
+router.get(
+  "/:id",
+  optionalAuth(),
+  validateRequest(MediaValidation.getMedia),
+  MediaController.getMedia
 );
 
 // Delete media
@@ -39,4 +46,3 @@ router.delete(
 );
 
 export const MediaRoutes = router;
-

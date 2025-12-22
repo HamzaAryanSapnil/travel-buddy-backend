@@ -1,4 +1,11 @@
-import { ChatThreadType, NotificationType, PlanVisibility, Prisma, TripRole, TripStatus } from "@prisma/client";
+import {
+  ChatThreadType,
+  NotificationType,
+  PlanVisibility,
+  Prisma,
+  TripRole,
+  TripStatus,
+} from "@prisma/client";
 import httpStatus from "http-status";
 import ApiError from "../../errors/ApiError";
 import {
@@ -44,7 +51,10 @@ const assertCanModifyPlan = async (authUser: TAuthUser, planId: string) => {
   return plan;
 };
 
-const assertCanViewPlan = async (authUser: TAuthUser | null, planId: string) => {
+const assertCanViewPlan = async (
+  authUser: TAuthUser | null,
+  planId: string
+) => {
   const plan = await prisma.travelPlan.findUnique({
     where: { id: planId },
   });
@@ -144,8 +154,8 @@ const createTravelPlan = async (
       data: {
         type: ChatThreadType.PLAN,
         refId: plan.id,
-        title: `Chat: ${plan.title}`
-      }
+        title: `Chat: ${plan.title}`,
+      },
     });
 
     // Add plan owner as thread owner
@@ -153,14 +163,14 @@ const createTravelPlan = async (
       data: {
         threadId: chatThread.id,
         userId: authUser.userId,
-        role: "owner"
-      }
+        role: "owner",
+      },
     });
 
     // Create media records for gallery images
     if (galleryUrls.length > 0) {
       await tx.media.createMany({
-        data: galleryUrls.map(url => ({
+        data: galleryUrls.map((url) => ({
           ownerId: authUser.userId,
           planId: plan.id,
           url,
@@ -285,18 +295,18 @@ const getMyTravelPlans = async (
 };
 
 const getPublicTravelPlans = async (query: TTravelPlanQuery) => {
-  const filters = pick<TTravelPlanQuery, keyof TTravelPlanQuery>(
+ const filters = pick<TTravelPlanQuery, keyof TTravelPlanQuery>(
     query,
     travelPlanFilterableFields as (keyof TTravelPlanQuery)[]
   );
-  
+
   const options: IPaginationOptions = {
     page: query.page ?? 1,
     limit: query.limit ?? 10,
     sortBy: query.sortBy ?? "startDate",
     sortOrder: query.sortOrder ?? "asc",
   };
-  
+
   const { page, limit, skip, sortBy, sortOrder } =
     paginationHelper.calculatePagination(options);
 
@@ -305,6 +315,13 @@ const getPublicTravelPlans = async (query: TTravelPlanQuery) => {
     travelType?: string;
     visibility?: string;
     isFeatured?: string;
+    destination?: string;
+    origin?: string;
+    startDate?: string;
+    endDate?: string;
+    budgetMin?: number;
+    budgetMax?: number;
+    description?: string;
   };
 
   const andConditions: Prisma.TravelPlanWhereInput[] = [];
@@ -462,7 +479,7 @@ const updateTravelPlan = async (
   if (payload.galleryImages && payload.galleryImages.length > 0) {
     // Create media records for gallery images
     await prisma.media.createMany({
-      data: payload.galleryImages.map(url => ({
+      data: payload.galleryImages.map((url) => ({
         ownerId: authUser.userId,
         planId: id,
         url,
@@ -477,8 +494,10 @@ const updateTravelPlan = async (
   if (payload.origin !== undefined) data.origin = payload.origin;
   if (payload.description !== undefined) data.description = payload.description;
   if (payload.coverPhoto !== undefined) data.coverPhoto = payload.coverPhoto;
-  if (payload.budgetMin !== undefined) data.budgetMin = Number(payload.budgetMin);
-  if (payload.budgetMax !== undefined) data.budgetMax = Number(payload.budgetMax);
+  if (payload.budgetMin !== undefined)
+    data.budgetMin = Number(payload.budgetMin);
+  if (payload.budgetMax !== undefined)
+    data.budgetMax = Number(payload.budgetMax);
 
   if (payload.travelType !== undefined) {
     data.travelType = payload.travelType;
@@ -496,10 +515,7 @@ const updateTravelPlan = async (
     const now = new Date();
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        "Invalid date format."
-      );
+      throw new ApiError(httpStatus.BAD_REQUEST, "Invalid date format.");
     }
 
     // If startDate is being updated, it must be a future date
@@ -527,18 +543,14 @@ const updateTravelPlan = async (
   });
 
   // Notify all plan members except updater (async, don't wait)
-  NotificationService.notifyPlanMembers(
-    id,
-    authUser.userId,
-    {
-      type: NotificationType.PLAN_UPDATED,
-      title: "Travel plan updated",
-      message: `"${updated.title}" has been updated`,
-      data: {
-        planId: id
-      }
-    }
-  ).catch((error) => {
+  NotificationService.notifyPlanMembers(id, authUser.userId, {
+    type: NotificationType.PLAN_UPDATED,
+    title: "Travel plan updated",
+    message: `"${updated.title}" has been updated`,
+    data: {
+      planId: id,
+    },
+  }).catch((error) => {
     // Log error but don't fail the update
     console.error("Failed to send notification for plan update:", error);
   });
@@ -579,14 +591,14 @@ const getAllTravelPlans = async (query: TTravelPlanQuery) => {
     query,
     travelPlanFilterableFields as (keyof TTravelPlanQuery)[]
   );
-  
+
   const options: IPaginationOptions = {
     page: query.page ?? 1,
     limit: query.limit ?? 10,
     sortBy: query.sortBy ?? "startDate",
     sortOrder: query.sortOrder ?? "asc",
   };
-  
+
   const { page, limit, skip, sortBy, sortOrder } =
     paginationHelper.calculatePagination(options);
 
@@ -704,7 +716,7 @@ const adminUpdateTravelPlan = async (
   if (payload.galleryImages && payload.galleryImages.length > 0) {
     // Create media records for gallery images
     await prisma.media.createMany({
-      data: payload.galleryImages.map(url => ({
+      data: payload.galleryImages.map((url) => ({
         ownerId: existing.ownerId,
         planId: id,
         url,
@@ -719,8 +731,11 @@ const adminUpdateTravelPlan = async (
   if (payload.origin !== undefined) data.origin = payload.origin;
   if (payload.description !== undefined) data.description = payload.description;
   if (payload.coverPhoto !== undefined) data.coverPhoto = payload.coverPhoto;
-  if (payload.budgetMin !== undefined) data.budgetMin = Number(payload.budgetMin);
-  if (payload.budgetMax !== undefined) data.budgetMax = Number(payload.budgetMax);
+  if (payload.budgetMin !== undefined)
+    data.budgetMin = Number(payload.budgetMin);
+  if (payload.budgetMax !== undefined)
+    data.budgetMax = Number(payload.budgetMax);
+  if (payload.isFeatured !== undefined) data.isFeatured = payload.isFeatured;
 
   if (payload.travelType !== undefined) {
     data.travelType = payload.travelType;
@@ -738,10 +753,7 @@ const adminUpdateTravelPlan = async (
     const now = new Date();
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        "Invalid date format."
-      );
+      throw new ApiError(httpStatus.BAD_REQUEST, "Invalid date format.");
     }
 
     // If startDate is being updated, it must be a future date
@@ -769,18 +781,14 @@ const adminUpdateTravelPlan = async (
   });
 
   // Notify all plan members (async, don't wait)
-  NotificationService.notifyPlanMembers(
-    id,
-    existing.ownerId,
-    {
-      type: NotificationType.PLAN_UPDATED,
-      title: "Travel plan updated",
-      message: `"${updated.title}" has been updated by admin`,
-      data: {
-        planId: id
-      }
-    }
-  ).catch((error) => {
+  NotificationService.notifyPlanMembers(id, existing.ownerId, {
+    type: NotificationType.PLAN_UPDATED,
+    title: "Travel plan updated",
+    message: `"${updated.title}" has been updated by admin`,
+    data: {
+      planId: id,
+    },
+  }).catch((error) => {
     // Log error but don't fail the update
     console.error("Failed to send notification for plan update:", error);
   });

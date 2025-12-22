@@ -59,9 +59,20 @@ const deleteMedia = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
         data: null,
     });
 }));
+const getPublicGallery = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield media_service_1.MediaService.getPublicGallery(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "Public gallery retrieved successfully.",
+        data: result.data,
+        meta: result.meta,
+    });
+}));
 exports.MediaController = {
     uploadMedia,
     getMedia,
     getMediaList,
     deleteMedia,
+    getPublicGallery,
 };

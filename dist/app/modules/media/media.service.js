@@ -46,8 +46,7 @@ const verifyMeetupOwnership = (authUser, meetupId) => __awaiter(void 0, void 0, 
     if (!meetup) {
         throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Meetup not found.");
     }
-    if (meetup.organizerId !== authUser.userId &&
-        authUser.role !== client_1.Role.ADMIN) {
+    if (meetup.organizerId !== authUser.userId && authUser.role !== client_1.Role.ADMIN) {
         throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "You don't have permission to upload media to this meetup. Only the organizer can upload media.");
     }
 });
@@ -307,7 +306,7 @@ const getMediaList = (authUser, query) => __awaiter(void 0, void 0, void 0, func
     const filters = (0, pick_1.default)(query, media_constant_1.mediaFilterableFields);
     const andConditions = [];
     // Permission-based filtering
-    if (authUser.role !== client_1.Role.ADMIN) {
+    if (authUser && authUser.role !== client_1.Role.ADMIN) {
         // Users can see their own media + media from plans they're members of
         const userPlans = yield prisma_1.prisma.tripMember.findMany({
             where: {
@@ -434,9 +433,79 @@ const deleteMedia = (authUser, mediaId) => __awaiter(void 0, void 0, void 0, fun
         message: "Media deleted successfully.",
     };
 });
+/**
+ * Get public gallery (homepage gallery section)
+ * Returns media from PUBLIC travel plans only
+ * @param query - Query parameters (limit, type)
+ * @returns Public gallery response
+ */
+const getPublicGallery = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    const limit = Number(query.limit) || 20;
+    const type = query.type || "photo";
+    // Get all PUBLIC plan IDs
+    const publicPlans = yield prisma_1.prisma.travelPlan.findMany({
+        where: { visibility: client_1.PlanVisibility.PUBLIC },
+        select: { id: true },
+    });
+    const publicPlanIds = publicPlans.map((p) => p.id);
+    if (publicPlanIds.length === 0) {
+        return {
+            data: [],
+            meta: {
+                page: 1,
+                limit: limit,
+                total: 0,
+            },
+        };
+    }
+    // Get media from PUBLIC plans
+    const media = yield prisma_1.prisma.media.findMany({
+        where: {
+            planId: { in: publicPlanIds },
+            type: type,
+        },
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+            plan: {
+                select: {
+                    id: true,
+                    title: true,
+                    destination: true,
+                },
+            },
+        },
+    });
+    // Get total count for meta
+    const total = yield prisma_1.prisma.media.count({
+        where: {
+            planId: { in: publicPlanIds },
+            type: type,
+        },
+    });
+    return {
+        data: media.map((m) => {
+            var _a, _b;
+            return ({
+                id: m.id,
+                url: m.url,
+                planId: m.planId,
+                planTitle: ((_a = m.plan) === null || _a === void 0 ? void 0 : _a.title) || null,
+                destination: ((_b = m.plan) === null || _b === void 0 ? void 0 : _b.destination) || null,
+                createdAt: m.createdAt,
+            });
+        }),
+        meta: {
+            page: 1,
+            limit: limit,
+            total: total,
+        },
+    };
+});
 exports.MediaService = {
     uploadMedia,
     getMedia,
     getMediaList,
     deleteMedia,
+    getPublicGallery,
 };

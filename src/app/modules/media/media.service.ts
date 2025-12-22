@@ -1,4 +1,4 @@
-import { Prisma, Role } from "@prisma/client";
+import { Prisma, Role, PlanVisibility } from "@prisma/client";
 import httpStatus from "http-status";
 import ApiError from "../../errors/ApiError";
 import {
@@ -15,6 +15,7 @@ import {
   TMediaResponse,
   TMediaListResponse,
   TMediaUploadResponse,
+  TPublicGalleryResponse,
 } from "./media.interface";
 
 /**
@@ -57,10 +58,7 @@ const verifyMeetupOwnership = async (
     throw new ApiError(httpStatus.NOT_FOUND, "Meetup not found.");
   }
 
-  if (
-    meetup.organizerId !== authUser.userId &&
-    authUser.role !== Role.ADMIN
-  ) {
+  if (meetup.organizerId !== authUser.userId && authUser.role !== Role.ADMIN) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
       "You don't have permission to upload media to this meetup. Only the organizer can upload media."
@@ -301,7 +299,9 @@ const uploadMedia = async (
       uploadedMedia.push(media as any);
       uploadedCount++;
     } catch (error: any) {
-      errors.push(`${imageUrl}: ${error.message || "Failed to create media record"}`);
+      errors.push(
+        `${imageUrl}: ${error.message || "Failed to create media record"}`
+      );
       failedCount++;
     }
   }
@@ -377,7 +377,7 @@ const getMedia = async (
  * @returns Paginated media list
  */
 const getMediaList = async (
-  authUser: TAuthUser,
+  authUser: TAuthUser | null,
   query: TMediaQuery
 ): Promise<TMediaListResponse> => {
   // Pagination
@@ -398,11 +398,11 @@ const getMediaList = async (
   const andConditions: Prisma.MediaWhereInput[] = [];
 
   // Permission-based filtering
-  if (authUser.role !== Role.ADMIN) {
+  if (authUser && authUser.role !== Role.ADMIN) {
     // Users can see their own media + media from plans they're members of
     const userPlans = await prisma.tripMember.findMany({
       where: {
-        userId: authUser.userId,
+        userId: authUser!.userId,
         status: "JOINED",
       },
       select: { planId: true },
@@ -412,7 +412,7 @@ const getMediaList = async (
 
     andConditions.push({
       OR: [
-        { ownerId: authUser.userId },
+        { ownerId: authUser!.userId },
         { planId: { in: planIds } },
         {
           meetup: {
@@ -543,10 +543,86 @@ const deleteMedia = async (
   };
 };
 
+/**
+ * Get public gallery (homepage gallery section)
+ * Returns media from PUBLIC travel plans only
+ * @param query - Query parameters (limit, type)
+ * @returns Public gallery response
+ */
+const getPublicGallery = async (query: {
+  limit?: number;
+  type?: "photo" | "video";
+}): Promise<TPublicGalleryResponse> => {
+  const limit = Number(query.limit) || 20;
+  const type = query.type || "photo";
+
+  // Get all PUBLIC plan IDs
+  const publicPlans = await prisma.travelPlan.findMany({
+    where: { visibility: PlanVisibility.PUBLIC },
+    select: { id: true },
+  });
+
+  const publicPlanIds = publicPlans.map((p) => p.id);
+
+  if (publicPlanIds.length === 0) {
+    return {
+      data: [],
+      meta: {
+        page: 1,
+        limit: limit,
+        total: 0,
+      },
+    };
+  }
+
+  // Get media from PUBLIC plans
+  const media = await prisma.media.findMany({
+    where: {
+      planId: { in: publicPlanIds },
+      type: type,
+    },
+    take: limit,
+    orderBy: { createdAt: "desc" },
+    include: {
+      plan: {
+        select: {
+          id: true,
+          title: true,
+          destination: true,
+        },
+      },
+    },
+  });
+
+  // Get total count for meta
+  const total = await prisma.media.count({
+    where: {
+      planId: { in: publicPlanIds },
+      type: type,
+    },
+  });
+
+  return {
+    data: media.map((m) => ({
+      id: m.id,
+      url: m.url,
+      planId: m.planId,
+      planTitle: m.plan?.title || null,
+      destination: m.plan?.destination || null,
+      createdAt: m.createdAt,
+    })),
+    meta: {
+      page: 1,
+      limit: limit,
+      total: total,
+    },
+  };
+};
+
 export const MediaService = {
   uploadMedia,
   getMedia,
   getMediaList,
   deleteMedia,
+  getPublicGallery,
 };
-

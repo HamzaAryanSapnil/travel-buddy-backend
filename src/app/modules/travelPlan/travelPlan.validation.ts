@@ -15,7 +15,8 @@ const createTravelPlanSchema = z.object({
           return !isNaN(startDate.getTime()) && startDate > now;
         },
         {
-          message: "Start date must be a future date. Past dates are not allowed.",
+          message:
+            "Start date must be a future date. Past dates are not allowed.",
         }
       ),
     endDate: z.string().min(1, { message: "EndDate is required." }),
@@ -30,8 +31,15 @@ const createTravelPlanSchema = z.object({
     ),
     visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
     description: z.string().optional(),
-    coverPhoto: z.string().url({ message: "Cover photo must be a valid URL." }).optional(),
-    galleryImages: z.array(z.string().url({ message: "Each gallery image must be a valid URL." })).optional(),
+    coverPhoto: z
+      .string()
+      .url({ message: "Cover photo must be a valid URL." })
+      .optional(),
+    galleryImages: z
+      .array(
+        z.string().url({ message: "Each gallery image must be a valid URL." })
+      )
+      .optional(),
   }),
 });
 
@@ -51,7 +59,8 @@ const updateTravelPlanSchema = z.object({
           return !isNaN(startDate.getTime()) && startDate > now;
         },
         {
-          message: "Start date must be a future date. Past dates are not allowed.",
+          message:
+            "Start date must be a future date. Past dates are not allowed.",
         }
       ),
     endDate: z.string().optional(),
@@ -68,8 +77,15 @@ const updateTravelPlanSchema = z.object({
     ),
     visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
     description: z.string().optional(),
-    coverPhoto: z.string().url({ message: "Cover photo must be a valid URL." }).optional(),
-    galleryImages: z.array(z.string().url({ message: "Each gallery image must be a valid URL." })).optional(),
+    coverPhoto: z
+      .string()
+      .url({ message: "Cover photo must be a valid URL." })
+      .optional(),
+    galleryImages: z
+      .array(
+        z.string().url({ message: "Each gallery image must be a valid URL." })
+      )
+      .optional(),
   }),
 });
 
@@ -82,10 +98,15 @@ const getSingleTravelPlanSchema = z.object({
 const getAllTravelPlansSchema = z.object({
   query: z.object({
     searchTerm: z.string().optional(),
-    travelType: z.enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"]).optional(),
+    travelType: z
+      .enum(["SOLO", "COUPLE", "FAMILY", "FRIENDS", "GROUP"])
+      .optional(),
     visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
     isFeatured: z.string().optional(),
-    ownerId: z.string().uuid({ message: "Owner ID must be a valid UUID." }).optional(),
+    ownerId: z
+      .string()
+      .uuid({ message: "Owner ID must be a valid UUID." })
+      .optional(),
     page: z
       .string()
       .optional()
@@ -97,6 +118,7 @@ const getAllTravelPlansSchema = z.object({
     sortBy: z.string().optional(),
     sortOrder: z.enum(["asc", "desc"]).optional(),
   }),
+  isFeatured: z.boolean().optional(),
 });
 
 const adminUpdateTravelPlanSchema = z.object({
@@ -118,7 +140,8 @@ const adminUpdateTravelPlanSchema = z.object({
           return !isNaN(startDate.getTime()) && startDate > now;
         },
         {
-          message: "Start date must be a future date. Past dates are not allowed.",
+          message:
+            "Start date must be a future date. Past dates are not allowed.",
         }
       ),
     endDate: z.string().optional(),
@@ -135,8 +158,13 @@ const adminUpdateTravelPlanSchema = z.object({
     ),
     visibility: z.enum(["PUBLIC", "PRIVATE", "UNLISTED"]).optional(),
     description: z.string().optional(),
-    coverPhoto: z.string().url({ message: "Cover photo must be a valid URL." }).optional(),
-    galleryImages: z.array(z.string().url({ message: "Each gallery image must be a valid URL." })).optional(),
+    coverPhoto: z
+      .url({ message: "Cover photo must be a valid URL." })
+      .optional(),
+    galleryImages: z
+      .array(z.url({ message: "Each gallery image must be a valid URL." }))
+      .optional(),
+    isFeatured: z.boolean().optional(),
   }),
 });
 

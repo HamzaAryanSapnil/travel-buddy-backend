@@ -31,7 +31,7 @@ const getMedia = catchAsync(async (req, res) => {
 });
 
 const getMediaList = catchAsync(async (req, res) => {
-  const authUser = req.user as TAuthUser;
+  const authUser = req.user as TAuthUser | null;
   const result = await MediaService.getMediaList(authUser, req.query);
 
   sendResponse(res, {
@@ -55,10 +55,23 @@ const deleteMedia = catchAsync(async (req, res) => {
   });
 });
 
+const getPublicGallery = catchAsync(async (req, res) => {
+  const result = await MediaService.getPublicGallery(req.query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Public gallery retrieved successfully.",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 export const MediaController = {
   uploadMedia,
   getMedia,
   getMediaList,
   deleteMedia,
+  getPublicGallery,
 };
 

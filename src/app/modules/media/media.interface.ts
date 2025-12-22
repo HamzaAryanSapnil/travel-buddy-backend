@@ -76,3 +76,21 @@ export type TMediaUploadResponse = {
   errors?: string[];
 };
 
+export type TPublicGalleryItem = {
+  id: string;
+  url: string;
+  planId: string | null;
+  planTitle: string | null;
+  destination: string | null;
+  createdAt: Date;
+};
+
+export type TPublicGalleryResponse = {
+  data: TPublicGalleryItem[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+};
+

@@ -3,6 +3,7 @@ import auth from "../../middlewares/auth";
 import validateRequest from "../../middlewares/validateRequest";
 import { ItineraryController } from "./itinerary.controller";
 import { ItineraryValidation } from "./itinerary.validation";
+import optionalAuth from "../../middlewares/optionalAuth";
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ router.post(
 // Note: For PUBLIC plans, this can be accessed without auth
 router.get(
   "/:planId",
-  auth("USER", "ADMIN"),
+  optionalAuth(),
   validateRequest(ItineraryValidation.getItems),
   ItineraryController.getPlanItems
 );
@@ -27,7 +28,7 @@ router.get(
 // Note: For PUBLIC plans, this can be accessed without auth
 router.get(
   "/item/:id",
-  auth("USER", "ADMIN"),
+  optionalAuth(),
   validateRequest(ItineraryValidation.getSingleItem),
   ItineraryController.getSingleItem
 );

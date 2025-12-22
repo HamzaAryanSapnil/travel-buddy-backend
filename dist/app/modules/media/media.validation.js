@@ -74,9 +74,23 @@ const deleteMediaSchema = zod_1.z.object({
         }),
     }),
 });
+const getPublicGallerySchema = zod_1.z.object({
+    query: zod_1.z.object({
+        limit: zod_1.z
+            .string()
+            .optional()
+            .transform((val) => (val ? parseInt(val, 10) : undefined)),
+        type: zod_1.z
+            .enum(media_constant_1.mediaTypeEnum, {
+            error: () => "Invalid media type.",
+        })
+            .optional(),
+    }),
+});
 exports.MediaValidation = {
     uploadMedia: uploadMediaSchema,
     getMedia: getMediaSchema,
     getMediaList: getMediaListSchema,
     deleteMedia: deleteMediaSchema,
+    getPublicGallery: getPublicGallerySchema,
 };

@@ -81,10 +81,25 @@ const deleteMediaSchema = z.object({
   }),
 });
 
+const getPublicGallerySchema = z.object({
+  query: z.object({
+    limit: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : undefined)),
+    type: z
+      .enum(mediaTypeEnum as unknown as [string, ...string[]], {
+        error: () => "Invalid media type.",
+      })
+      .optional(),
+  }),
+});
+
 export const MediaValidation = {
   uploadMedia: uploadMediaSchema,
   getMedia: getMediaSchema,
   getMediaList: getMediaListSchema,
   deleteMedia: deleteMediaSchema,
+  getPublicGallery: getPublicGallerySchema,
 };
 

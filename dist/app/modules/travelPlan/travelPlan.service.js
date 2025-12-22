@@ -549,6 +549,8 @@ const adminUpdateTravelPlan = (id, payload) => __awaiter(void 0, void 0, void 0,
         data.budgetMin = Number(payload.budgetMin);
     if (payload.budgetMax !== undefined)
         data.budgetMax = Number(payload.budgetMax);
+    if (payload.isFeatured !== undefined)
+        data.isFeatured = payload.isFeatured;
     if (payload.travelType !== undefined) {
         data.travelType = payload.travelType;
     }

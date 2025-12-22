@@ -14,7 +14,7 @@ import {
   TItineraryPlanItemsResponse,
   TBulkUpsertPayload,
   TBulkUpsertItem,
-  TReorderPayload
+  TReorderPayload,
 } from "./itinerary.interface";
 import { computeNextOrder, computeNextOrderTx } from "./itinerary.helper";
 import { getDaysBetween } from "../../helper/dateHelper";
@@ -29,13 +29,16 @@ const getTotalDays = (startDate: Date, endDate: Date): number => {
 /**
  * Validate dayIndex is within plan's totalDays range
  */
-const validateDayIndex = async (planId: string, dayIndex: number): Promise<void> => {
+const validateDayIndex = async (
+  planId: string,
+  dayIndex: number
+): Promise<void> => {
   const plan = await prisma.travelPlan.findUnique({
     where: { id: planId },
     select: {
       startDate: true,
-      endDate: true
-    }
+      endDate: true,
+    },
   });
 
   if (!plan) {
@@ -66,16 +69,18 @@ const validateDateRange = async (
     where: { id: planId },
     select: {
       startDate: true,
-      endDate: true
-    }
+      endDate: true,
+    },
   });
 
   if (!plan) {
     throw new ApiError(httpStatus.NOT_FOUND, "Travel plan not found.");
   }
 
-  const planStart = plan.startDate;
-  const planEnd = plan.endDate;
+  const planStart = new Date(plan.startDate);
+  const planEnd = new Date(plan.endDate);
+  planStart.setHours(0, 0, 0, 0);
+  planEnd.setHours(23, 59, 59, 999);
 
   if (startAt) {
     const start = new Date(startAt);
@@ -112,8 +117,8 @@ const createItem = async (
       id: true,
       startDate: true,
       endDate: true,
-      visibility: true
-    }
+      visibility: true,
+    },
   });
 
   if (!plan) {
@@ -158,30 +163,26 @@ const createItem = async (
         title: payload.title,
         description: payload.description || null,
         locationId: payload.locationId || null,
-        order: order!
+        order: order!,
       },
       include: {
-        location: true
-      }
+        location: true,
+      },
     });
 
     return item;
   });
 
   // Notify all plan members except creator (async, don't wait)
-  NotificationService.notifyPlanMembers(
-    payload.planId,
-    authUser.userId,
-    {
-      type: NotificationType.ITINERARY_ADDED,
-      title: "New itinerary item added",
-      message: `"${payload.title}" was added to the itinerary`,
-      data: {
-        planId: payload.planId,
-        itemId: result.id
-      }
-    }
-  ).catch((error) => {
+  NotificationService.notifyPlanMembers(payload.planId, authUser.userId, {
+    type: NotificationType.ITINERARY_ADDED,
+    title: "New itinerary item added",
+    message: `"${payload.title}" was added to the itinerary`,
+    data: {
+      planId: payload.planId,
+      itemId: result.id,
+    },
+  }).catch((error) => {
     // Log error but don't fail the item creation
     console.error("Failed to send notification for itinerary item:", error);
   });
@@ -207,9 +208,9 @@ const createItem = async (
           country: result.location.country,
           latitude: result.location.latitude,
           longitude: result.location.longitude,
-          googlePlaceId: result.location.googlePlaceId
+          googlePlaceId: result.location.googlePlaceId,
         }
-      : null
+      : null,
   };
 };
 
@@ -228,8 +229,8 @@ const getPlanItems = async (
       id: true,
       startDate: true,
       endDate: true,
-      visibility: true
-    }
+      visibility: true,
+    },
   });
 
   if (!plan) {
@@ -248,7 +249,10 @@ const getPlanItems = async (
       );
     }
 
-    const { member } = await TripMemberService.getTripMemberPermission(authUser, planId);
+    const { member } = await TripMemberService.getTripMemberPermission(
+      authUser,
+      planId
+    );
     if (!member) {
       throw new ApiError(
         httpStatus.FORBIDDEN,
@@ -261,11 +265,14 @@ const getPlanItems = async (
 
   // Build where clause
   const where: Prisma.ItineraryItemWhereInput = {
-    planId
+    planId,
   };
 
   if (query.dayIndex) {
-    const dayIndex = typeof query.dayIndex === "string" ? parseInt(query.dayIndex, 10) : query.dayIndex;
+    const dayIndex =
+      typeof query.dayIndex === "string"
+        ? parseInt(query.dayIndex, 10)
+        : query.dayIndex;
     if (!isNaN(dayIndex)) {
       where.dayIndex = dayIndex;
     }
@@ -275,12 +282,9 @@ const getPlanItems = async (
   const items = await prisma.itineraryItem.findMany({
     where,
     include: {
-      location: true
+      location: true,
     },
-    orderBy: [
-      { dayIndex: "asc" },
-      { order: "asc" }
-    ]
+    orderBy: [{ dayIndex: "asc" }, { order: "asc" }],
   });
 
   // Group by day
@@ -312,9 +316,9 @@ const getPlanItems = async (
             country: item.location.country,
             latitude: item.location.latitude,
             longitude: item.location.longitude,
-            googlePlaceId: item.location.googlePlaceId
+            googlePlaceId: item.location.googlePlaceId,
           }
-        : null
+        : null,
     });
   });
 
@@ -323,13 +327,13 @@ const getPlanItems = async (
   for (let day = 1; day <= totalDays; day++) {
     days.push({
       day,
-      items: groupedByDay[day] || []
+      items: groupedByDay[day] || [],
     });
   }
 
   return {
     days,
-    totalDays
+    totalDays,
   };
 };
 
@@ -346,11 +350,11 @@ const getSingleItem = async (
       plan: {
         select: {
           id: true,
-          visibility: true
-        }
+          visibility: true,
+        },
       },
-      location: true
-    }
+      location: true,
+    },
   });
 
   if (!item) {
@@ -369,7 +373,10 @@ const getSingleItem = async (
       );
     }
 
-    const { member } = await TripMemberService.getTripMemberPermission(authUser, item.planId);
+    const { member } = await TripMemberService.getTripMemberPermission(
+      authUser,
+      item.planId
+    );
     if (!member) {
       throw new ApiError(
         httpStatus.FORBIDDEN,
@@ -399,9 +406,9 @@ const getSingleItem = async (
           country: item.location.country,
           latitude: item.location.latitude,
           longitude: item.location.longitude,
-          googlePlaceId: item.location.googlePlaceId
+          googlePlaceId: item.location.googlePlaceId,
         }
-      : null
+      : null,
   };
 };
 
@@ -421,10 +428,10 @@ const updateItem = async (
         select: {
           id: true,
           startDate: true,
-          endDate: true
-        }
-      }
-    }
+          endDate: true,
+        },
+      },
+    },
   });
 
   if (!item) {
@@ -475,11 +482,11 @@ const updateItem = async (
     if (payload.locationId !== undefined) {
       if (payload.locationId) {
         data.location = {
-          connect: { id: payload.locationId }
+          connect: { id: payload.locationId },
         };
       } else {
         data.location = {
-          disconnect: true
+          disconnect: true,
         };
       }
     }
@@ -491,8 +498,8 @@ const updateItem = async (
       where: { id: itemId },
       data,
       include: {
-        location: true
-      }
+        location: true,
+      },
     });
 
     return result;
@@ -519,26 +526,29 @@ const updateItem = async (
           country: updated.location.country,
           latitude: updated.location.latitude,
           longitude: updated.location.longitude,
-          googlePlaceId: updated.location.googlePlaceId
+          googlePlaceId: updated.location.googlePlaceId,
         }
-      : null
+      : null,
   };
 };
 
 /**
  * Delete an itinerary item
  */
-const deleteItem = async (authUser: TAuthUser, itemId: string): Promise<void> => {
+const deleteItem = async (
+  authUser: TAuthUser,
+  itemId: string
+): Promise<void> => {
   // Load item and plan
   const item = await prisma.itineraryItem.findUnique({
     where: { id: itemId },
     include: {
       plan: {
         select: {
-          id: true
-        }
-      }
-    }
+          id: true,
+        },
+      },
+    },
   });
 
   if (!item) {
@@ -555,7 +565,7 @@ const deleteItem = async (authUser: TAuthUser, itemId: string): Promise<void> =>
 
   // Delete item
   await prisma.itineraryItem.delete({
-    where: { id: itemId }
+    where: { id: itemId },
   });
 
   // Note: Order compaction is optional and can be done via reorder endpoint if needed
@@ -575,8 +585,8 @@ const bulkUpsert = async (
     select: {
       id: true,
       startDate: true,
-      endDate: true
-    }
+      endDate: true,
+    },
   });
 
   if (!plan) {
@@ -636,7 +646,7 @@ const bulkUpsert = async (
     // If replace=true, delete all existing items for the plan
     if (payload.replace) {
       await tx.itineraryItem.deleteMany({
-        where: { planId: payload.planId }
+        where: { planId: payload.planId },
       });
     }
 
@@ -650,7 +660,7 @@ const bulkUpsert = async (
         // Update existing item (only if not replacing)
         const existing = await tx.itineraryItem.findUnique({
           where: { id: itemData.id },
-          include: { location: true }
+          include: { location: true },
         });
 
         if (existing && existing.planId === payload.planId) {
@@ -664,13 +674,15 @@ const bulkUpsert = async (
               title: itemData.title,
               description: itemData.description || null,
               locationId: itemData.locationId || null,
-              order: itemData.order ?? existing.order
+              order: itemData.order ?? existing.order,
             },
-            include: { location: true }
+            include: { location: true },
           });
         } else {
           // Item not found or belongs to different plan, create new
-          const order = itemData.order ?? (await computeNextOrderTx(tx, payload.planId, itemData.dayIndex));
+          const order =
+            itemData.order ??
+            (await computeNextOrderTx(tx, payload.planId, itemData.dayIndex));
           item = await tx.itineraryItem.create({
             data: {
               planId: payload.planId,
@@ -680,14 +692,16 @@ const bulkUpsert = async (
               title: itemData.title,
               description: itemData.description || null,
               locationId: itemData.locationId || null,
-              order
+              order,
             },
-            include: { location: true }
+            include: { location: true },
           });
         }
       } else {
         // Create new item
-        const order = itemData.order ?? (await computeNextOrderTx(tx, payload.planId, itemData.dayIndex));
+        const order =
+          itemData.order ??
+          (await computeNextOrderTx(tx, payload.planId, itemData.dayIndex));
         item = await tx.itineraryItem.create({
           data: {
             planId: payload.planId,
@@ -697,9 +711,9 @@ const bulkUpsert = async (
             title: itemData.title,
             description: itemData.description || null,
             locationId: itemData.locationId || null,
-            order
+            order,
           },
-          include: { location: true }
+          include: { location: true },
         });
       }
 
@@ -724,9 +738,9 @@ const bulkUpsert = async (
               country: item.location.country,
               latitude: item.location.latitude,
               longitude: item.location.longitude,
-              googlePlaceId: item.location.googlePlaceId
+              googlePlaceId: item.location.googlePlaceId,
             }
-          : null
+          : null,
       });
     }
 
@@ -735,20 +749,16 @@ const bulkUpsert = async (
 
   // Notify all plan members except updater (async, don't wait)
   // This is typically used by AI Planner for bulk updates
-  NotificationService.notifyPlanMembers(
-    payload.planId,
-    authUser.userId,
-    {
-      type: NotificationType.ITINERARY_UPDATED,
-      title: "Itinerary updated",
-      message: payload.replace 
-        ? "Your travel plan itinerary has been updated" 
-        : `${payload.items.length} itinerary items were added or updated`,
-      data: {
-        planId: payload.planId
-      }
-    }
-  ).catch((error) => {
+  NotificationService.notifyPlanMembers(payload.planId, authUser.userId, {
+    type: NotificationType.ITINERARY_UPDATED,
+    title: "Itinerary updated",
+    message: payload.replace
+      ? "Your travel plan itinerary has been updated"
+      : `${payload.items.length} itinerary items were added or updated`,
+    data: {
+      planId: payload.planId,
+    },
+  }).catch((error) => {
     // Log error but don't fail the bulk update
     console.error("Failed to send notification for itinerary update:", error);
   });
@@ -769,8 +779,8 @@ const reorderItems = async (
     select: {
       id: true,
       startDate: true,
-      endDate: true
-    }
+      endDate: true,
+    },
   });
 
   if (!plan) {
@@ -792,8 +802,8 @@ const reorderItems = async (
   const existingItems = await prisma.itineraryItem.findMany({
     where: {
       id: { in: itemIds },
-      planId: payload.planId
-    }
+      planId: payload.planId,
+    },
   });
 
   if (existingItems.length !== itemIds.length) {
@@ -829,11 +839,11 @@ const reorderItems = async (
           where: { id: update.id },
           data: {
             dayIndex: update.dayIndex,
-            order: update.order
+            order: update.order,
           },
           include: {
-            location: true
-          }
+            location: true,
+          },
         })
       )
     );
@@ -859,9 +869,9 @@ const reorderItems = async (
             country: item.location.country,
             latitude: item.location.latitude,
             longitude: item.location.longitude,
-            googlePlaceId: item.location.googlePlaceId
+            googlePlaceId: item.location.googlePlaceId,
           }
-        : null
+        : null,
     }));
   });
 
@@ -875,6 +885,5 @@ export const ItineraryService = {
   updateItem,
   deleteItem,
   bulkUpsert,
-  reorderItems
+  reorderItems,
 };
-

@@ -30,8 +30,7 @@ const getMyTravelPlans = catchAsync(async (req, res) => {
 });
 
 const getPublicTravelPlans = catchAsync(async (req, res) => {
-    const result = await TravelPlanService.getPublicTravelPlans(req.query);
-
+    const result = await TravelPlanService.getPublicTravelPlans(req?.query);
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
